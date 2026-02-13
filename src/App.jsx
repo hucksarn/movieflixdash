@@ -1058,7 +1058,12 @@ export default function App() {
     }
     if (!user?.Policy) return false;
     const policy = { ...user.Policy, EnableMediaPlayback: enable };
-    if (!enable) {
+    if (enable) {
+      policy.EnableAllFolders = true;
+      policy.EnabledFolders = [];
+      policy.EnableAllChannels = true;
+      policy.EnabledChannels = [];
+    } else {
       policy.EnableAllFolders = false;
       policy.EnabledFolders = [];
       policy.EnableAllChannels = false;
