@@ -320,6 +320,29 @@ const fetchJellyseerrJson = async (path, options = {}) => {
   return response.json();
 };
 
+let cachedLibraryGuids = null;
+let cachedSubscriptionGuid = null;
+const fetchLibraryGuids = async () => {
+  if (cachedLibraryGuids) {
+    return { all: cachedLibraryGuids, subscription: cachedSubscriptionGuid };
+  }
+  const response = await fetch(`${API_BASE}/api/emby/Library/SelectableMediaFolders`);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Failed to load libraries.");
+  }
+  const data = await response.json();
+  const allGuids = (Array.isArray(data) ? data : [])
+    .map((item) => item?.Guid || item?.Id || "")
+    .filter(Boolean);
+  const subscription = (Array.isArray(data) ? data : []).find(
+    (item) => String(item?.Name || "").trim().toLowerCase() === "subscription"
+  );
+  cachedLibraryGuids = allGuids;
+  cachedSubscriptionGuid = subscription?.Guid || subscription?.Id || null;
+  return { all: cachedLibraryGuids, subscription: cachedSubscriptionGuid };
+};
+
 export default function App() {
   useEffect(() => {
     const handleError = (event) => {
@@ -1058,16 +1081,33 @@ export default function App() {
     }
     if (!user?.Policy) return false;
     const policy = { ...user.Policy, EnableMediaPlayback: enable };
-    if (enable) {
-      policy.EnableAllFolders = true;
-      policy.EnabledFolders = [];
-      policy.EnableAllChannels = true;
-      policy.EnabledChannels = [];
-    } else {
-      policy.EnableAllFolders = false;
-      policy.EnabledFolders = [];
-      policy.EnableAllChannels = false;
-      policy.EnabledChannels = [];
+    try {
+      const { all, subscription } = await fetchLibraryGuids();
+      if (enable) {
+        policy.EnableAllFolders = false;
+        policy.EnabledFolders = subscription
+          ? all.filter((guid) => guid !== subscription)
+          : all;
+        policy.EnableAllChannels = true;
+        policy.EnabledChannels = [];
+      } else {
+        policy.EnableAllFolders = false;
+        policy.EnabledFolders = subscription ? [subscription] : [];
+        policy.EnableAllChannels = false;
+        policy.EnabledChannels = [];
+      }
+    } catch {
+      if (enable) {
+        policy.EnableAllFolders = true;
+        policy.EnabledFolders = [];
+        policy.EnableAllChannels = true;
+        policy.EnabledChannels = [];
+      } else {
+        policy.EnableAllFolders = false;
+        policy.EnabledFolders = [];
+        policy.EnableAllChannels = false;
+        policy.EnabledChannels = [];
+      }
     }
     await updateEmbyPolicy(userId, policy);
     setSyncedUsersState((prev) =>
