@@ -1120,7 +1120,7 @@ export default function App() {
       user = await fetchEmbyUser(userId);
     }
     if (!user?.Policy) return false;
-    const policy = { ...user.Policy, EnableMediaPlayback: enable };
+    const policy = { ...user.Policy, EnableMediaPlayback: true };
     try {
       const { all, subscription } = await fetchLibraryGuids();
       if (enable) {
@@ -1137,17 +1137,10 @@ export default function App() {
         policy.EnabledChannels = [];
       }
     } catch {
-      if (enable) {
-        policy.EnableAllFolders = true;
-        policy.EnabledFolders = [];
-        policy.EnableAllChannels = true;
-        policy.EnabledChannels = [];
-      } else {
-        policy.EnableAllFolders = false;
-        policy.EnabledFolders = [];
-        policy.EnableAllChannels = false;
-        policy.EnabledChannels = [];
-      }
+      policy.EnableAllFolders = true;
+      policy.EnabledFolders = [];
+      policy.EnableAllChannels = true;
+      policy.EnabledChannels = [];
     }
     await updateEmbyPolicy(userId, policy);
     setSyncedUsersState((prev) =>

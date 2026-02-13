@@ -202,10 +202,10 @@ const syncPlaybackLibraries = async () => {
     const unlimited = isUnlimitedUser(user, unlimitedUsers);
     const isAdmin =
       user?.Policy?.IsAdministrator === true || user?.Configuration?.IsAdministrator === true;
-    const shouldEnable = unlimited || isAdmin || status.status === "active";
+    const shouldEnableLibraries = unlimited || isAdmin || status.status === "active";
 
     let target = {};
-    if (shouldEnable) {
+    if (shouldEnableLibraries) {
       target = {
         EnableAllFolders: false,
         EnabledFolders: subscriptionGuid
@@ -224,7 +224,6 @@ const syncPlaybackLibraries = async () => {
     }
 
     const needsUpdate =
-      Boolean(policy.EnableMediaPlayback) !== Boolean(shouldEnable) ||
       Boolean(policy.EnableAllFolders) !== Boolean(target.EnableAllFolders) ||
       Boolean(policy.EnableAllChannels) !== Boolean(target.EnableAllChannels) ||
       normalizeList(policy.EnabledFolders).join("|") !==
@@ -234,7 +233,7 @@ const syncPlaybackLibraries = async () => {
 
     if (!needsUpdate) continue;
 
-    const nextPolicy = { ...policy, EnableMediaPlayback: shouldEnable, ...target };
+    const nextPolicy = { ...policy, EnableMediaPlayback: true, ...target };
     const policyUrl = `${base}/Users/${userId}/Policy?api_key=${apiKey}`;
     let resp = await safeFetch(policyUrl, {
       method: "POST",
