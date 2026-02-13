@@ -343,6 +343,46 @@ const fetchLibraryGuids = async () => {
   return { all: cachedLibraryGuids, subscription: cachedSubscriptionGuid };
 };
 
+const normalizeGuidList = (value) =>
+  (Array.isArray(value) ? value : []).map(String).filter(Boolean).sort();
+
+const libraryPolicyForPlayback = async (enablePlayback) => {
+  const { all, subscription } = await fetchLibraryGuids();
+  if (enablePlayback) {
+    return {
+      EnableAllFolders: false,
+      EnabledFolders: subscription ? all.filter((guid) => guid !== subscription) : all,
+      EnableAllChannels: true,
+      EnabledChannels: [],
+    };
+  }
+  return {
+    EnableAllFolders: false,
+    EnabledFolders: subscription ? [subscription] : [],
+    EnableAllChannels: false,
+    EnabledChannels: [],
+  };
+};
+
+const shouldUpdateLibraryPolicy = (policy, target) => {
+  if (!policy) return true;
+  if (Boolean(policy.EnableAllFolders) !== Boolean(target.EnableAllFolders)) return true;
+  if (Boolean(policy.EnableAllChannels) !== Boolean(target.EnableAllChannels)) return true;
+  const leftFolders = normalizeGuidList(policy.EnabledFolders);
+  const rightFolders = normalizeGuidList(target.EnabledFolders);
+  if (leftFolders.length !== rightFolders.length) return true;
+  for (let i = 0; i < leftFolders.length; i += 1) {
+    if (leftFolders[i] !== rightFolders[i]) return true;
+  }
+  const leftChannels = normalizeGuidList(policy.EnabledChannels);
+  const rightChannels = normalizeGuidList(target.EnabledChannels);
+  if (leftChannels.length !== rightChannels.length) return true;
+  for (let i = 0; i < leftChannels.length; i += 1) {
+    if (leftChannels[i] !== rightChannels[i]) return true;
+  }
+  return false;
+};
+
 export default function App() {
   useEffect(() => {
     const handleError = (event) => {
@@ -1429,6 +1469,29 @@ export default function App() {
             createdAt: existing?.createdAt || nowIso,
           };
         });
+        const adjustedUsers = [];
+        for (const user of mergedUsers) {
+          const userId = user.Id || user.id;
+          const playback = user?.Policy?.EnableMediaPlayback;
+          if (!userId || (playback !== true && playback !== false)) {
+            adjustedUsers.push(user);
+            continue;
+          }
+          try {
+            const target = await libraryPolicyForPlayback(playback);
+            if (shouldUpdateLibraryPolicy(user.Policy, target)) {
+              await updateEmbyPolicy(userId, { ...user.Policy, ...target });
+              adjustedUsers.push({
+                ...user,
+                Policy: { ...user.Policy, ...target },
+              });
+              continue;
+            }
+          } catch {
+            // Ignore policy sync errors; keep current policy.
+          }
+          adjustedUsers.push(user);
+        }
         const existingIds = new Set(
           syncedUsers.map((user) => user.Id || user.id).filter(Boolean)
         );
@@ -1471,8 +1534,8 @@ export default function App() {
             saveServerSubscriptions(nextSubs).catch(() => {});
           }
         }
-        saveSyncedUsers(mergedUsers || []);
-        setSyncedUsersState(mergedUsers || []);
+        saveSyncedUsers(adjustedUsers || []);
+        setSyncedUsersState(adjustedUsers || []);
         if (showMessage) {
           setSettingsMessage("Users synced.");
           const addedCount = newUsers.length;
