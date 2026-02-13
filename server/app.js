@@ -23,7 +23,7 @@ const embyProxyLog = path.resolve(ROOT, "emby-proxy.log");
 const serviceProxyLog = path.resolve(ROOT, "service-proxy.log");
 
 const PORT = Number(process.env.PORT || 5001);
-const POLICY_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+const POLICY_SYNC_INTERVAL_MS = 5 * 1000;
 
 const loadEnv = () => {
   const envPath = path.resolve(ROOT, ".env");
@@ -103,6 +103,46 @@ const writeLog = (filePath, line) => {
   }
 };
 
+const isUnlimitedUser = (user, unlimitedList) => {
+  const name = String(user?.Name || user?.name || "").toLowerCase();
+  const userId = user?.Id || user?.id || "";
+  return (unlimitedList || []).some(
+    (item) =>
+      item?.key === userId ||
+      (item?.userId && item.userId === userId) ||
+      (item?.username || "").toLowerCase() === name
+  );
+};
+
+const getUserSubscriptionStatus = (subs, user) => {
+  const userId = user?.Id || user?.id || "";
+  const nameKey = String(user?.Name || user?.name || "").toLowerCase();
+  const matching = (subs || []).filter((sub) => {
+    const subUserId = sub?.userId || sub?.userKey || "";
+    const subName = String(sub?.username || "").toLowerCase();
+    return (userId && subUserId === userId) || (nameKey && subName === nameKey);
+  });
+
+  if (matching.length === 0) return { status: "expired" };
+
+  const latest = matching
+    .filter((sub) => sub?.endDate)
+    .sort(
+      (a, b) =>
+        new Date(b.endDate || b.submittedAt || 0) -
+        new Date(a.endDate || a.submittedAt || 0)
+    )[0];
+
+  if (!latest?.endDate) return { status: "expired" };
+
+  const end = new Date(latest.endDate);
+  if (Number.isNaN(end.getTime())) return { status: "expired" };
+  const endUtc = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+  const now = new Date();
+  const nowUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return endUtc >= nowUtc ? { status: "active" } : { status: "expired" };
+};
+
 const syncPlaybackLibraries = async () => {
   const settings = loadSettings();
   const embyUrl = settings?.embyUrl;
@@ -146,6 +186,9 @@ const syncPlaybackLibraries = async () => {
     users = [];
   }
 
+  const subscriptions = readJson(subscriptionsFile, []);
+  const unlimitedUsers = readJson(unlimitedFile, []);
+
   const normalizeList = (value) =>
     (Array.isArray(value) ? value : []).map(String).filter(Boolean).sort();
 
@@ -153,11 +196,16 @@ const syncPlaybackLibraries = async () => {
   for (const user of users) {
     const userId = user?.Id || user?.id;
     const policy = user?.Policy || {};
-    const playback = policy?.EnableMediaPlayback;
-    if (!userId || (playback !== true && playback !== false)) continue;
+    if (!userId) continue;
+
+    const status = getUserSubscriptionStatus(subscriptions, user);
+    const unlimited = isUnlimitedUser(user, unlimitedUsers);
+    const isAdmin =
+      user?.Policy?.IsAdministrator === true || user?.Configuration?.IsAdministrator === true;
+    const shouldEnable = unlimited || isAdmin || status.status === "active";
 
     let target = {};
-    if (playback === true) {
+    if (shouldEnable) {
       target = {
         EnableAllFolders: false,
         EnabledFolders: subscriptionGuid
@@ -176,6 +224,7 @@ const syncPlaybackLibraries = async () => {
     }
 
     const needsUpdate =
+      Boolean(policy.EnableMediaPlayback) !== Boolean(shouldEnable) ||
       Boolean(policy.EnableAllFolders) !== Boolean(target.EnableAllFolders) ||
       Boolean(policy.EnableAllChannels) !== Boolean(target.EnableAllChannels) ||
       normalizeList(policy.EnabledFolders).join("|") !==
@@ -185,7 +234,7 @@ const syncPlaybackLibraries = async () => {
 
     if (!needsUpdate) continue;
 
-    const nextPolicy = { ...policy, ...target };
+    const nextPolicy = { ...policy, EnableMediaPlayback: shouldEnable, ...target };
     const policyUrl = `${base}/Users/${userId}/Policy?api_key=${apiKey}`;
     let resp = await safeFetch(policyUrl, {
       method: "POST",
