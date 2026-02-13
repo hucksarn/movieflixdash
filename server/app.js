@@ -790,8 +790,8 @@ const handleEmbyProxy = async (req, res) => {
     return true;
   }
   let reqPath = req.url || "/";
-  if (reqPath.startsWith("/api/jellyseerr")) {
-    reqPath = reqPath.replace(/^\/api\/jellyseerr/, "") || "/";
+  if (reqPath.startsWith("/api/emby")) {
+    reqPath = reqPath.replace(/^\/api\/emby/, "") || "/";
   }
   const base = baseUrl.replace(/\/+$/, "");
   const targetUrl = `${base}${reqPath.startsWith("/") ? "" : "/"}${reqPath}`;
@@ -851,7 +851,10 @@ const handleJellyseerrProxy = async (req, res) => {
     return true;
   }
 
-  const reqPath = req.url || "/";
+  let reqPath = req.url || "/";
+  if (reqPath.startsWith("/api/jellyseerr")) {
+    reqPath = reqPath.replace(/^\/api\/jellyseerr/, "") || "/";
+  }
   const base = baseUrl.replace(/\/+$/, "");
   const targetUrl = `${base}${reqPath.startsWith("/") ? "" : "/"}${reqPath}`;
   const method = req.method || "GET";
