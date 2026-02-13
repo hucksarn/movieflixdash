@@ -722,7 +722,10 @@ const proxyToService = async (req, res, { urlKey, apiKeyKey, label, envUrlKey, e
     res.end(`${label} API key not set.`);
     return true;
   }
-  const reqPath = req.url || "/";
+  let reqPath = req.url || "/";
+  if (reqPath.startsWith("/api/emby")) {
+    reqPath = reqPath.replace(/^\/api\/emby/, "") || "/";
+  }
   const base = baseUrl.replace(/\/+$/, "");
   let targetUrl = `${base}${reqPath.startsWith("/") ? "" : "/"}${reqPath}`;
   const method = req.method || "GET";
@@ -786,7 +789,10 @@ const handleEmbyProxy = async (req, res) => {
     res.end("Emby URL not set.");
     return true;
   }
-  const reqPath = req.url || "/";
+  let reqPath = req.url || "/";
+  if (reqPath.startsWith("/api/jellyseerr")) {
+    reqPath = reqPath.replace(/^\/api\/jellyseerr/, "") || "/";
+  }
   const base = baseUrl.replace(/\/+$/, "");
   const targetUrl = `${base}${reqPath.startsWith("/") ? "" : "/"}${reqPath}`;
   const method = req.method || "GET";
