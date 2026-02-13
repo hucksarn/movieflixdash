@@ -46,6 +46,7 @@ const logClientError = async (payload) => {
 
 const getSettings = () => JSON.parse(localStorage.getItem(LS_SETTINGS) || "{}");
 const saveSettings = (settings) => localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+const clearSettings = () => localStorage.removeItem(LS_SETTINGS);
 const getSyncedUsers = () => JSON.parse(localStorage.getItem(LS_USERS) || "[]");
 const saveSyncedUsers = (users) => localStorage.setItem(LS_USERS, JSON.stringify(users));
 const getSession = () => JSON.parse(localStorage.getItem(LS_SESSION) || "null");
@@ -523,7 +524,16 @@ export default function App() {
     const loadServerSettings = async () => {
       try {
         const data = await fetchServerSettings();
-        if (!mounted || !data || Object.keys(data).length === 0) return;
+        if (!mounted || !data) return;
+        if (Object.keys(data).length === 0) {
+          clearSettings();
+          const empty = { accounts: [] };
+          if (mounted) {
+            setSettingsState(empty);
+            setSavedSettings(empty);
+          }
+          return;
+        }
         const next = { ...getSettings(), ...data };
         if (!next.accounts || next.accounts.length === 0) {
           next.accounts = normalizeAccounts(next);
