@@ -1058,11 +1058,17 @@ export default function App() {
     }
     if (!user?.Policy) return false;
     const policy = { ...user.Policy, EnableMediaPlayback: enable };
+    if (!enable) {
+      policy.EnableAllFolders = false;
+      policy.EnabledFolders = [];
+      policy.EnableAllChannels = false;
+      policy.EnabledChannels = [];
+    }
     await updateEmbyPolicy(userId, policy);
     setSyncedUsersState((prev) =>
       prev.map((item) =>
         (item.Id || item.id) === userId
-          ? { ...item, Policy: { ...item.Policy, EnableMediaPlayback: enable } }
+          ? { ...item, Policy: { ...item.Policy, ...policy } }
           : item
       )
     );
