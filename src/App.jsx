@@ -287,10 +287,9 @@ const getExpiredUserCount = (subscriptions) => {
   return count;
 };
 
-const buildEmbyUrl = (settings, path) => {
-  const base = (settings?.embyUrl || "").replace(/\/+$/, "");
+const buildEmbyUrl = (_settings, path) => {
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${normalized}`;
+  return `${API_BASE}/api/emby${normalized}`;
 };
 
 const authenticateEmby = async (username, password, settings) => {
