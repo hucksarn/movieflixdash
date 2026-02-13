@@ -23,7 +23,8 @@ const embyProxyLog = path.resolve(ROOT, "emby-proxy.log");
 const serviceProxyLog = path.resolve(ROOT, "service-proxy.log");
 
 const PORT = Number(process.env.PORT || 5001);
-const POLICY_SYNC_INTERVAL_MS = 5 * 1000;
+const POLICY_SYNC_INTERVAL_MS = 10 * 1000;
+const POLICY_SYNC_DEBOUNCE_MS = 500;
 
 const loadEnv = () => {
   const envPath = path.resolve(ROOT, ".env");
@@ -1170,6 +1171,23 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server listening on http://0.0.0.0:${PORT}`);
 });
 
+let syncTimer = null;
+const schedulePolicySync = () => {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    syncPlaybackLibraries().catch(() => {});
+  }, POLICY_SYNC_DEBOUNCE_MS);
+};
+
+try {
+  fs.watch(subscriptionsFile, schedulePolicySync);
+  fs.watch(unlimitedFile, schedulePolicySync);
+  fs.watch(settingsFile, schedulePolicySync);
+} catch {
+  // ignore watch errors; interval fallback below
+}
+
+schedulePolicySync();
 setInterval(() => {
   syncPlaybackLibraries().catch(() => {});
 }, POLICY_SYNC_INTERVAL_MS);
