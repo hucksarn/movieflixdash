@@ -59,8 +59,9 @@ export default function RequestsPage({ currentUser, jellyseerrToken = "" }) {
   const searchInputRef = useRef(null);
 
   const buildUserHeaders = () => {
-    const headers = { "x-jellyseerr-auth": "user" };
+    const headers = {};
     if (jellyseerrToken) {
+      headers["x-jellyseerr-auth"] = "user";
       headers.Authorization = `Bearer ${jellyseerrToken}`;
     }
     return headers;
