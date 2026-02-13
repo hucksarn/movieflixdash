@@ -23,6 +23,7 @@ const embyProxyLog = path.resolve(ROOT, "emby-proxy.log");
 const serviceProxyLog = path.resolve(ROOT, "service-proxy.log");
 
 const PORT = Number(process.env.PORT || 5001);
+const POLICY_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
 const loadEnv = () => {
   const envPath = path.resolve(ROOT, ".env");
@@ -99,6 +100,110 @@ const writeLog = (filePath, line) => {
     fs.appendFileSync(filePath, `${new Date().toISOString()} ${line}\n`);
   } catch {
     // ignore log errors
+  }
+};
+
+const syncPlaybackLibraries = async () => {
+  const settings = loadSettings();
+  const embyUrl = settings?.embyUrl;
+  const apiKey = settings?.apiKey;
+  if (!embyUrl || !apiKey) return;
+
+  const base = embyUrl.replace(/\/+$/, "");
+  const headers = { "X-Emby-Token": apiKey };
+
+  const libsRes = await safeFetch(
+    `${base}/Library/SelectableMediaFolders?api_key=${apiKey}`,
+    { headers }
+  );
+  if (!libsRes.ok) {
+    writeLog(embyProxyLog, `policy-sync libs failed ${libsRes.status}`);
+    return;
+  }
+  let libs = [];
+  try {
+    libs = libsRes.text ? JSON.parse(libsRes.text) : [];
+  } catch {
+    libs = [];
+  }
+  const allGuids = (Array.isArray(libs) ? libs : [])
+    .map((item) => item?.Guid || item?.Id || "")
+    .filter(Boolean);
+  const subscription = (Array.isArray(libs) ? libs : []).find(
+    (item) => String(item?.Name || "").trim().toLowerCase() === "subscription"
+  );
+  const subscriptionGuid = subscription?.Guid || subscription?.Id || null;
+
+  const usersRes = await safeFetch(`${base}/Users?api_key=${apiKey}`, { headers });
+  if (!usersRes.ok) {
+    writeLog(embyProxyLog, `policy-sync users failed ${usersRes.status}`);
+    return;
+  }
+  let users = [];
+  try {
+    users = usersRes.text ? JSON.parse(usersRes.text) : [];
+  } catch {
+    users = [];
+  }
+
+  const normalizeList = (value) =>
+    (Array.isArray(value) ? value : []).map(String).filter(Boolean).sort();
+
+  let updated = 0;
+  for (const user of users) {
+    const userId = user?.Id || user?.id;
+    const policy = user?.Policy || {};
+    const playback = policy?.EnableMediaPlayback;
+    if (!userId || (playback !== true && playback !== false)) continue;
+
+    let target = {};
+    if (playback === true) {
+      target = {
+        EnableAllFolders: false,
+        EnabledFolders: subscriptionGuid
+          ? allGuids.filter((guid) => guid !== subscriptionGuid)
+          : allGuids,
+        EnableAllChannels: true,
+        EnabledChannels: [],
+      };
+    } else {
+      target = {
+        EnableAllFolders: false,
+        EnabledFolders: subscriptionGuid ? [subscriptionGuid] : [],
+        EnableAllChannels: false,
+        EnabledChannels: [],
+      };
+    }
+
+    const needsUpdate =
+      Boolean(policy.EnableAllFolders) !== Boolean(target.EnableAllFolders) ||
+      Boolean(policy.EnableAllChannels) !== Boolean(target.EnableAllChannels) ||
+      normalizeList(policy.EnabledFolders).join("|") !==
+        normalizeList(target.EnabledFolders).join("|") ||
+      normalizeList(policy.EnabledChannels).join("|") !==
+        normalizeList(target.EnabledChannels).join("|");
+
+    if (!needsUpdate) continue;
+
+    const nextPolicy = { ...policy, ...target };
+    const policyUrl = `${base}/Users/${userId}/Policy?api_key=${apiKey}`;
+    let resp = await safeFetch(policyUrl, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify(nextPolicy),
+    });
+    if (!resp.ok) {
+      resp = await safeFetch(policyUrl, {
+        method: "PUT",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify(nextPolicy),
+      });
+    }
+    if (resp.ok) updated += 1;
+  }
+
+  if (updated > 0) {
+    writeLog(embyProxyLog, `policy-sync updated=${updated}`);
   }
 };
 
@@ -1016,3 +1121,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server listening on http://0.0.0.0:${PORT}`);
 });
+
+setInterval(() => {
+  syncPlaybackLibraries().catch(() => {});
+}, POLICY_SYNC_INTERVAL_MS);
