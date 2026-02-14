@@ -1477,8 +1477,8 @@ export default function App() {
       return {
         ...sub,
         submittedAt: nextIso,
-        approvedAt: sub.approvedAt || nextIso,
-        reviewedAt: sub.reviewedAt || nextIso,
+        approvedAt: nextIso,
+        reviewedAt: nextIso,
       };
     });
     saveSubscriptions(next);
