@@ -148,24 +148,27 @@ export default function PaymentHistoryPage({ subscriptions = [], currentUser }) 
                               )}
                             </span>
                           </div>
-                          <div className="detail-item">
-                            <span className="detail-label">Discount</span>
-                            <span className="detail-value">
-                              {(() => {
-                                const price = Number(sub?.price || 0);
-                                const actual =
-                                  sub?.finalAmount !== undefined && sub?.finalAmount !== null
-                                    ? Number(sub.finalAmount)
-                                    : price;
-                                const discount =
-                                  typeof sub?.discountAmount === "number"
-                                    ? Number(sub.discountAmount)
-                                    : price - actual;
-                                if (!Number.isFinite(discount) || discount <= 0) return "-";
-                                return formatFromSub(sub, discount);
-                              })()}
-                            </span>
-                          </div>
+                          {(() => {
+                            const price = Number(sub?.price || 0);
+                            const actual =
+                              sub?.finalAmount !== undefined && sub?.finalAmount !== null
+                                ? Number(sub.finalAmount)
+                                : price;
+                            const discount =
+                              typeof sub?.discountAmount === "number"
+                                ? Number(sub.discountAmount)
+                                : price - actual;
+                            if (!Number.isFinite(discount) || discount <= 0 || price <= 0) {
+                              return null;
+                            }
+                            const percent = Math.round((discount / price) * 100);
+                            return (
+                              <div className="detail-item">
+                                <span className="detail-label">Discount</span>
+                                <span className="detail-value">{percent}% off</span>
+                              </div>
+                            );
+                          })()}
                           <div className="detail-item">
                             <span className="detail-label">Start</span>
                             <span className="detail-value">{formatDate(sub.startDate)}</span>
