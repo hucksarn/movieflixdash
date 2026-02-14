@@ -16,6 +16,7 @@ const settingsFile = path.resolve(ROOT, "settings.json");
 const subscriptionsFile = path.resolve(ROOT, "subscriptions.json");
 const slipsDir = path.resolve(ROOT, "slips");
 const slipsIndexFile = path.resolve(ROOT, "slips.json");
+const telegramStateFile = path.resolve(ROOT, "telegram-state.json");
 const plansFile = path.resolve(ROOT, "plans.json");
 const movieRequestsFile = path.resolve(ROOT, "movie-requests.json");
 const mediaRequestsFile = path.resolve(ROOT, "media-requests.json");
@@ -140,6 +141,8 @@ const ensureSlipDir = () => {
 
 const loadSlipIndex = () => readJson(slipsIndexFile, {});
 const saveSlipIndex = (index) => writeJson(slipsIndexFile, index);
+const loadTelegramState = () => readJson(telegramStateFile, {});
+const saveTelegramState = (state) => writeJson(telegramStateFile, state);
 
 const parseDataUrl = (value) => {
   if (!value || typeof value !== "string") return null;
@@ -155,6 +158,53 @@ const getSlipExt = (mime) => {
   if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
   if (mime.includes("gif")) return "gif";
   return "bin";
+};
+
+const buildPaymentResultText = (sub, statusLabel, approvedBy) => {
+  const amount = sub?.finalAmount !== undefined && sub?.finalAmount !== null ? sub.finalAmount : sub?.price;
+  return `${statusLabel}\n` +
+    `Date: ${String(sub?.approvedAt || sub?.reviewedAt || sub?.submittedAt || "").slice(0, 10)}\n` +
+    `User: ${sub?.username || sub?.userId || "Unknown"}\n` +
+    `Plan: ${sub?.planName || "-"}\n` +
+    `Amount: ${sub?.currency || ""} ${amount || 0}\n` +
+    `Approved by: ${approvedBy || "dashboard"}`;
+};
+
+const editTelegramMessage = async (token, msg, text) => {
+  if (!msg?.chatId || !msg?.messageId) return;
+  const payload = {
+    chat_id: msg.chatId,
+    message_id: msg.messageId,
+    reply_markup: { inline_keyboard: [] },
+  };
+  const method = msg.hasPhoto ? "editMessageCaption" : "editMessageText";
+  const body = msg.hasPhoto ? { ...payload, caption: text, parse_mode: "HTML" } : { ...payload, text, parse_mode: "HTML" };
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // ignore telegram errors
+  }
+};
+
+const updateTelegramPaymentStatus = async (sub, statusLabel) => {
+  const settings = loadSettings();
+  const token = String(settings?.telegramBotToken || "").trim();
+  if (!token || !sub?.id) return;
+  const state = loadTelegramState();
+  const paymentMessages = state?.paymentMessages || {};
+  const messages = paymentMessages[sub.id];
+  if (!Array.isArray(messages) || messages.length === 0) return;
+  const text = buildPaymentResultText(sub, statusLabel, "dashboard");
+  for (const msg of messages) {
+    await editTelegramMessage(token, msg, text);
+  }
+  delete paymentMessages[sub.id];
+  state.paymentMessages = paymentMessages;
+  saveTelegramState(state);
 };
 
 const storeSlipForSub = (sub, index) => {
@@ -602,11 +652,23 @@ const handleSubscriptions = async (req, res) => {
     } catch {
       data = [];
     }
+    const previous = readJson(subscriptionsFile, []);
     const migrated = migrateSlips(data);
-    if (migrated.changed) {
-      writeJson(subscriptionsFile, migrated.next);
-    } else {
-      writeJson(subscriptionsFile, data);
+    const nextData = migrated.changed ? migrated.next : data;
+    writeJson(subscriptionsFile, nextData);
+    const prevById = new Map((previous || []).map((sub) => [sub.id, sub]));
+    const updates = (nextData || []).filter((sub) => {
+      const prev = prevById.get(sub.id);
+      if (!prev) return false;
+      const prevStatus = String(prev.status || "").toLowerCase();
+      const nextStatus = String(sub.status || "").toLowerCase();
+      return prevStatus === "pending" && (nextStatus === "approved" || nextStatus === "rejected");
+    });
+    for (const sub of updates) {
+      const label = String(sub.status || "").toLowerCase() === "approved"
+        ? "✅ <b>APPROVED</b>"
+        : "❌ <b>REJECTED</b>";
+      await updateTelegramPaymentStatus(sub, label);
     }
     sendJson(res, { ok: true });
     return true;

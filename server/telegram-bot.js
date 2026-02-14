@@ -47,6 +47,7 @@ const loadState = () =>
     notifiedMedia: [],
     notifiedExpired: [],
     pendingMediaApprovals: {},
+    paymentMessages: {},
   });
 
 const saveState = (state) => writeJson(STATE_PATH, state);
@@ -54,6 +55,9 @@ const ensureStateShape = (state) => {
   if (!state || typeof state !== "object") return loadState();
   if (!state.pendingMediaApprovals || typeof state.pendingMediaApprovals !== "object") {
     state.pendingMediaApprovals = {};
+  }
+  if (!state.paymentMessages || typeof state.paymentMessages !== "object") {
+    state.paymentMessages = {};
   }
   if (!Array.isArray(state.notifiedPayments)) state.notifiedPayments = [];
   if (!Array.isArray(state.notifiedMedia)) state.notifiedMedia = [];
@@ -600,7 +604,20 @@ const notifyPendingPayments = async (settings, token, state) => {
         } else {
           result = await sendMessage(token, adminId, text, keyboard);
         }
-        if (result?.ok) successCount += 1;
+        if (result?.ok) {
+          successCount += 1;
+          const messageId = result?.result?.message_id;
+          const chatId = result?.result?.chat?.id || adminId;
+          if (messageId) {
+            const list = state.paymentMessages[sub.id] || [];
+            list.push({
+              chatId,
+              messageId,
+              hasPhoto: Boolean(result?.result?.photo),
+            });
+            state.paymentMessages[sub.id] = list;
+          }
+        }
       } catch (err) {
         console.error("Telegram send error:", err?.message || err);
       }
@@ -685,6 +702,10 @@ const handleCallback = async (settings, token, callback) => {
         approvedBy
       );
       await editTelegramMessage(token, callback.message, detailText);
+      if (state.paymentMessages && state.paymentMessages[id]) {
+        delete state.paymentMessages[id];
+        saveState(state);
+      }
       await answerCallback(token, callback.id, "Payment approved.");
       return;
     }
@@ -698,6 +719,10 @@ const handleCallback = async (settings, token, callback) => {
         approvedBy
       );
       await editTelegramMessage(token, callback.message, detailText);
+      if (state.paymentMessages && state.paymentMessages[id]) {
+        delete state.paymentMessages[id];
+        saveState(state);
+      }
       await answerCallback(token, callback.id, "Payment rejected.");
       return;
     }
