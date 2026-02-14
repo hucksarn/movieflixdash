@@ -4,7 +4,7 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$APP_DIR"
 
-PORT="${PORT:-5173}"
+PORT="${PORT:-5002}"
 HOST="${HOST:-0.0.0.0}"
 
 mkdir -p .pids
@@ -39,4 +39,4 @@ echo $! > .pids/telegram-bot.pid
 echo "Telegram bot started (logs: telegram-bot.log)"
 
 echo
-echo "Done. Open: http://<server-ip>:${PORT}/emby/"
+echo "Done. Open: http://<server-ip>:${PORT}/"
