@@ -216,7 +216,20 @@ export default function PaymentsReceivedPage({
                   className="select"
                   value={manualForm.planId}
                   onChange={(event) =>
-                    setManualForm((prev) => ({ ...prev, planId: event.target.value }))
+                    setManualForm((prev) => {
+                      const nextPlanId = event.target.value;
+                      const plan = plans.find((item) => item.id === nextPlanId);
+                      const days = Number(plan?.durationDays || plan?.duration || 0);
+                      let nextEnd = prev.endDate;
+                      if (prev.startDate && days) {
+                        const start = new Date(prev.startDate);
+                        if (!Number.isNaN(start.getTime())) {
+                          const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+                          nextEnd = end.toISOString().slice(0, 10);
+                        }
+                      }
+                      return { ...prev, planId: nextPlanId, endDate: nextEnd };
+                    })
                   }
                 >
                   <option value="">Select plan</option>
@@ -246,7 +259,20 @@ export default function PaymentsReceivedPage({
                   type="date"
                   value={manualForm.startDate}
                   onChange={(event) =>
-                    setManualForm((prev) => ({ ...prev, startDate: event.target.value }))
+                    setManualForm((prev) => {
+                      const nextStart = event.target.value;
+                      const plan = plans.find((item) => item.id === prev.planId);
+                      const days = Number(plan?.durationDays || plan?.duration || 0);
+                      let nextEnd = prev.endDate;
+                      if (nextStart && days) {
+                        const start = new Date(nextStart);
+                        if (!Number.isNaN(start.getTime())) {
+                          const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+                          nextEnd = end.toISOString().slice(0, 10);
+                        }
+                      }
+                      return { ...prev, startDate: nextStart, endDate: nextEnd };
+                    })
                   }
                 />
               </label>
