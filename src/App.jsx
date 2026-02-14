@@ -1448,6 +1448,28 @@ export default function App() {
     });
   };
 
+  const handleUpdatePaymentAmount = (subId, actualPaid) => {
+    if (!isAdmin || !subId || !Number.isFinite(actualPaid)) return;
+    const next = subscriptions.map((sub) => {
+      if (sub.id !== subId) return sub;
+      const planPrice = Number(sub.price || 0);
+      const discount = planPrice - actualPaid;
+      return {
+        ...sub,
+        finalAmount: actualPaid,
+        discountAmount: discount > 0 ? discount : 0,
+      };
+    });
+    saveSubscriptions(next);
+    setSubscriptions(next);
+    saveServerSubscriptions(next).catch(() => {});
+    pushToast({
+      title: "Amount updated",
+      message: "Payment amount saved.",
+      tone: "success",
+    });
+  };
+
   const handleAddUnlimitedUser = (user) => {
     if (!isAdmin || !user) return;
     const userId = user.Id || user.id || "";
@@ -2354,6 +2376,7 @@ export default function App() {
                     subscriptions={subscriptions}
                     onDeletePayment={handleDeletePayment}
                     onUploadSlip={handleUploadPaymentSlip}
+                    onUpdatePaymentAmount={handleUpdatePaymentAmount}
                   />
                 ) : (
                   <Navigate to="/dashboard" replace />

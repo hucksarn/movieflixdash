@@ -42,9 +42,11 @@ export default function PaymentsReceivedPage({
   subscriptions = [],
   onDeletePayment,
   onUploadSlip,
+  onUpdatePaymentAmount,
 }) {
   const [openSlip, setOpenSlip] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [amountDrafts, setAmountDrafts] = useState({});
 
   const approved = useMemo(
     () =>
@@ -73,6 +75,18 @@ export default function PaymentsReceivedPage({
       event.target.value = "";
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleAmountChange = (subId, value) => {
+    setAmountDrafts((prev) => ({ ...prev, [subId]: value }));
+  };
+
+  const commitAmount = (sub) => {
+    if (!onUpdatePaymentAmount) return;
+    const raw = amountDrafts[sub.id];
+    const actualPaid = raw === "" || raw === undefined ? null : Number(raw);
+    if (actualPaid === null || !Number.isFinite(actualPaid)) return;
+    onUpdatePaymentAmount(sub.id, actualPaid);
   };
 
   return (
@@ -111,6 +125,11 @@ export default function PaymentsReceivedPage({
               const rowId =
                 sub.id || `${sub.submittedAt || "no-date"}-${sub.planId || sub.planName || ""}`;
               const slipUrl = sub.slipData || sub.slipUrl || "";
+              const currentAmount =
+                amountDrafts[sub.id] ??
+                (sub.finalAmount !== undefined && sub.finalAmount !== null
+                  ? String(sub.finalAmount)
+                  : String(sub.price || ""));
               return (
                 <Fragment key={rowId}>
                   <tr>
@@ -124,10 +143,32 @@ export default function PaymentsReceivedPage({
                       {sub.planName || "-"}
                     </td>
                     <td className="col-received-amount" data-label="Amount">
-                      {formatAmount(sub)}
+                      {onUpdatePaymentAmount ? (
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="table-input"
+                          value={currentAmount}
+                          onChange={(event) => handleAmountChange(sub.id, event.target.value)}
+                          onBlur={() => commitAmount(sub)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitAmount(sub);
+                            }
+                          }}
+                        />
+                      ) : (
+                        formatAmount(sub)
+                      )}
                     </td>
                     <td className="col-received-discount" data-label="Discount">
-                      {formatDiscount(sub)}
+                      {formatDiscount({
+                        ...sub,
+                        finalAmount:
+                          amountDrafts[sub.id] ?? sub.finalAmount ?? sub.price ?? 0,
+                      })}
                     </td>
                     <td className="col-received-status" data-label="Status">
                       {String(sub.status || "-").toUpperCase()}
