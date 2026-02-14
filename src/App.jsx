@@ -1527,6 +1527,82 @@ export default function App() {
             saveServerSubscriptions(nextSubs).catch(() => {});
           }
         }
+        const currentIds = new Set(
+          adjustedUsers.map((user) => user.Id || user.id).filter(Boolean)
+        );
+        const currentNames = new Set(
+          adjustedUsers
+            .map((user) => String(user?.Name || user?.name || "").toLowerCase())
+            .filter(Boolean)
+        );
+        const removedIds = new Set();
+        const removedNames = new Set();
+        syncedUsers.forEach((user) => {
+          const id = user?.Id || user?.id || "";
+          const name = String(user?.Name || user?.name || "").toLowerCase();
+          if (id && !currentIds.has(id)) removedIds.add(id);
+          if (name && !currentNames.has(name)) removedNames.add(name);
+        });
+
+        if (removedIds.size > 0 || removedNames.size > 0) {
+          const nextSubs = subscriptions.filter((sub) => {
+            const key = sub?.userId || sub?.userKey || "";
+            const name = String(sub?.username || "").toLowerCase();
+            if (key && removedIds.has(key)) return false;
+            if (name && removedNames.has(name)) return false;
+            return true;
+          });
+          if (nextSubs.length !== subscriptions.length) {
+            saveSubscriptions(nextSubs);
+            setSubscriptions(nextSubs);
+            saveServerSubscriptions(nextSubs).catch(() => {});
+          }
+
+          const nextUnlimited = unlimitedUsers.filter((item) => {
+            const key = item?.key || item?.userId || "";
+            const name = String(item?.username || "").toLowerCase();
+            if (key && removedIds.has(key)) return false;
+            if (name && removedNames.has(name)) return false;
+            return true;
+          });
+          if (nextUnlimited.length !== unlimitedUsers.length) {
+            saveUnlimitedUsers(nextUnlimited);
+            setUnlimitedUsers(nextUnlimited);
+            saveServerUnlimitedUsers(nextUnlimited).catch(() => {});
+          }
+
+          const nextTags = { ...(userTags || {}) };
+          let tagsChanged = false;
+          removedIds.forEach((id) => {
+            if (nextTags[id]) {
+              delete nextTags[id];
+              tagsChanged = true;
+            }
+          });
+          removedNames.forEach((name) => {
+            if (nextTags[name]) {
+              delete nextTags[name];
+              tagsChanged = true;
+            }
+          });
+          if (tagsChanged) {
+            saveUserTags(nextTags);
+            setUserTags(nextTags);
+            saveServerUserTags(nextTags).catch(() => {});
+          }
+
+          const nextRequests = movieRequests.filter((request) => {
+            const name = String(request?.requestedBy || "").toLowerCase();
+            if (name && removedNames.has(name)) return false;
+            return true;
+          });
+          if (nextRequests.length !== movieRequests.length) {
+            saveMovieRequests(nextRequests);
+            setMovieRequests(nextRequests);
+            saveServerMovieRequests(nextRequests).catch(() => {});
+          }
+        }
+
         saveSyncedUsers(adjustedUsers || []);
         setSyncedUsersState(adjustedUsers || []);
         if (showMessage) {
