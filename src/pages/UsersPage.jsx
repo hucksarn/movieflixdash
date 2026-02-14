@@ -691,8 +691,6 @@ export default function UsersPage({
               const draft = dateDrafts[userId] || {};
               const draftStart = draft.startDate ?? startValue;
               const draftEnd = draft.endDate ?? endValue;
-              const hasDraftChanges =
-                (draftStart || "") !== (startValue || "") || (draftEnd || "") !== (endValue || "");
               const markedUnlimited = isMarkedUnlimited(user);
               const defaultUnlimited = isDefaultUnlimited(user);
               const canMakeUnlimited =
@@ -815,6 +813,9 @@ export default function UsersPage({
                                     ...prev,
                                     [userId]: { ...(prev[userId] || {}), startDate: nextStart, endDate: nextEnd },
                                   }));
+                                  if (!onUpdateDates) return;
+                                  if (!nextStart || !nextEnd) return;
+                                  onUpdateDates({ user, startDate: nextStart, endDate: nextEnd });
                                 }}
                               />
                             </span>
@@ -831,24 +832,12 @@ export default function UsersPage({
                                     ...prev,
                                     [userId]: { ...(prev[userId] || {}), endDate: nextEnd },
                                   }));
+                                  if (!onUpdateDates) return;
+                                  const startForSave = draftStart || startValue;
+                                  if (!startForSave || !nextEnd) return;
+                                  onUpdateDates({ user, startDate: startForSave, endDate: nextEnd });
                                 }}
                               />
-                            </span>
-                          </div>
-                          <div className="detail-item">
-                            <span className="detail-label">Save</span>
-                            <span className="detail-value">
-                              <button
-                                type="button"
-                                className="btn small"
-                                disabled={!hasDraftChanges || !onUpdateDates || !draftStart || !draftEnd}
-                                onClick={() => {
-                                  if (!onUpdateDates) return;
-                                  onUpdateDates({ user, startDate: draftStart, endDate: draftEnd });
-                                }}
-                              >
-                                Save Dates
-                              </button>
                             </span>
                           </div>
                           <div className="detail-item">
