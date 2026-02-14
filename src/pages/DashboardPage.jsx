@@ -25,6 +25,30 @@ const getLatestSubsByUser = (subscriptions) => {
   return latest;
 };
 
+const formatMoney = (amount, currency) => {
+  const value = Number(amount || 0);
+  const safeCurrency = currency || "MVR";
+  const normalized = safeCurrency === "USD" ? "MVR" : safeCurrency;
+  const formatted = Number.isFinite(value)
+    ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "0.00";
+  return `${normalized} ${formatted}`;
+};
+
+const sumByCurrency = (subs) => {
+  const totals = {};
+  (subs || []).forEach((sub) => {
+    const rawCurrency = sub?.currency || "MVR";
+    const currency = rawCurrency === "USD" ? "MVR" : rawCurrency;
+    const amount =
+      sub?.finalAmount !== undefined && sub?.finalAmount !== null ? sub.finalAmount : sub?.price;
+    const value = Number(amount || 0);
+    if (!Number.isFinite(value)) return;
+    totals[currency] = (totals[currency] || 0) + value;
+  });
+  return totals;
+};
+
 export default function DashboardPage({ users = [], subscriptions = [], movieRequests = [] }) {
   const navigate = useNavigate();
   const pendingApprovals = useMemo(
@@ -58,6 +82,23 @@ export default function DashboardPage({ users = [], subscriptions = [], movieReq
     return results;
   }, [subscriptions, users]);
 
+  const paymentsReceived = useMemo(
+    () =>
+      (subscriptions || []).filter((sub) =>
+        ["approved", "expired"].includes(String(sub.status || "").toLowerCase())
+      ),
+    [subscriptions]
+  );
+  const paymentsTotals = useMemo(() => sumByCurrency(paymentsReceived), [paymentsReceived]);
+  const recentTotals = useMemo(() => {
+    const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recent = paymentsReceived.filter((sub) => {
+      const ts = new Date(sub.approvedAt || sub.reviewedAt || sub.submittedAt || 0).getTime();
+      return ts >= since;
+    });
+    return sumByCurrency(recent);
+  }, [paymentsReceived]);
+
   const userCount = users.length;
 
   return (
@@ -90,6 +131,46 @@ export default function DashboardPage({ users = [], subscriptions = [], movieReq
           </div>
           <div className="mini-body">Movie/TV requests not completed yet.</div>
         </button>
+        <button
+          type="button"
+          className="mini-card"
+          onClick={() => navigate("/payments-received")}
+        >
+          <div className="mini-header">
+            <div className="mini-title">Payments Received</div>
+            <div className="mini-pill">{paymentsReceived.length}</div>
+          </div>
+          <div className="mini-body">View total collected payments.</div>
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h3>Payments Report</h3>
+          <div className="count">{paymentsReceived.length} total</div>
+        </div>
+        <div className="status-grid">
+          <div className="status-item">
+            <div className="status-label">Total Received</div>
+            <div className="status-value">
+              {Object.keys(paymentsTotals).length === 0
+                ? "-"
+                : Object.entries(paymentsTotals)
+                    .map(([currency, total]) => formatMoney(total, currency))
+                    .join(" • ")}
+            </div>
+          </div>
+          <div className="status-item">
+            <div className="status-label">Last 30 Days</div>
+            <div className="status-value">
+              {Object.keys(recentTotals).length === 0
+                ? "-"
+                : Object.entries(recentTotals)
+                    .map(([currency, total]) => formatMoney(total, currency))
+                    .join(" • ")}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="dashboard-grid">
