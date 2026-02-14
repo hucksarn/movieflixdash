@@ -31,6 +31,7 @@ const cloudflaredTunnelName = process.env.CLOUDFLARED_TUNNEL || "movieflix";
 const clientErrorsLog = path.resolve(ROOT, "client-errors.log");
 const embyProxyLog = path.resolve(ROOT, "emby-proxy.log");
 const serviceProxyLog = path.resolve(ROOT, "service-proxy.log");
+const errorLogFile = path.resolve("/tmp", "movieflix-error.log");
 
 const PORT = Number(process.env.PORT || 5001);
 const POLICY_SYNC_INTERVAL_MS = 10 * 1000;
@@ -113,6 +114,22 @@ const writeLog = (filePath, line) => {
     // ignore log errors
   }
 };
+
+const logServerError = (label, err) => {
+  const message =
+    err && typeof err === "object"
+      ? `${label} ${err.message || ""} ${err.stack || ""}`.trim()
+      : `${label} ${String(err)}`;
+  writeLog(errorLogFile, message);
+};
+
+process.on("uncaughtException", (err) => {
+  logServerError("uncaughtException", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  logServerError("unhandledRejection", err);
+});
 
 const isProcessRunning = (pid) => {
   if (!pid || Number.isNaN(Number(pid))) return false;
