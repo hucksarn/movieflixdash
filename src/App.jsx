@@ -1498,10 +1498,13 @@ export default function App() {
           newUsers.forEach((user) => {
             const userId = user.Id || user.id;
             if (!userId) return;
-            const hasApproved = nextSubs.some(
-              (sub) => sub.userId === userId && sub.status === "approved"
-            );
-            if (hasApproved) return;
+            const usernameKey = String(user.Name || user.name || "").toLowerCase();
+            const hasAny = nextSubs.some((sub) => {
+              const key = sub.userId || sub.userKey || "";
+              const name = String(sub.username || "").toLowerCase();
+              return (key && key === userId) || (usernameKey && name === usernameKey);
+            });
+            if (hasAny) return;
             if (settings?.disableAutoTrial) return;
             nextSubs.push({
               id: safeUUID(),

@@ -285,12 +285,24 @@ const syncPlaybackLibraries = async () => {
       subscriptionsByUser.set(key, { sub, time });
     }
   });
+  const hasAnySubscription = (userId, username) => {
+    const nameKey = String(username || "").toLowerCase();
+    return (subscriptions || []).some((sub) => {
+      const key = sub?.userId || sub?.userKey || "";
+      const name = String(sub?.username || "").toLowerCase();
+      return (userId && key === userId) || (nameKey && name === nameKey);
+    });
+  };
   for (const user of users) {
     const userId = user?.Id || user?.id;
     const policy = user?.Policy || {};
     if (!userId) continue;
 
     if (!disableAutoTrial && !isUnlimitedUser(user, unlimitedUsers)) {
+      const username = user?.Name || user?.name || "";
+      if (hasAnySubscription(userId, username)) {
+        // Never touch existing users' subscription history.
+      } else {
       const latest = subscriptionsByUser.get(userId)?.sub;
       const hasApproved = latest?.status === "approved" || latest?.status === "active";
       if (!hasApproved) {
@@ -316,6 +328,7 @@ const syncPlaybackLibraries = async () => {
           time: new Date(trial.endDate).getTime(),
         });
         writeJson(subscriptionsFile, subscriptions);
+      }
       }
     }
 
