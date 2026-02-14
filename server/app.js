@@ -32,6 +32,7 @@ const clientErrorsLog = path.resolve(ROOT, "client-errors.log");
 const embyProxyLog = path.resolve(ROOT, "emby-proxy.log");
 const serviceProxyLog = path.resolve(ROOT, "service-proxy.log");
 const errorLogFile = path.resolve("/tmp", "movieflix-error.log");
+const clientErrorFile = path.resolve("/tmp", "movieflix-client.log");
 
 const PORT = Number(process.env.PORT || 5001);
 const POLICY_SYNC_INTERVAL_MS = 10 * 1000;
@@ -628,6 +629,7 @@ const handleClientErrors = async (req, res) => {
   const entry = { timestamp: new Date().toISOString(), ...payload };
   try {
     fs.appendFileSync(clientErrorsLog, `${JSON.stringify(entry)}\n`);
+    fs.appendFileSync(clientErrorFile, `${JSON.stringify(entry)}\n`);
   } catch {
     // ignore log errors
   }
