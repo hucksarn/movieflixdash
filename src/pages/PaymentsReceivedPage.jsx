@@ -558,10 +558,6 @@ export default function PaymentsReceivedPage({
                             <span className="detail-value">{formatDate(sub.endDate)}</span>
                           </div>
                           <div className="detail-item">
-                            <span className="detail-label">Slip</span>
-                            <span className="detail-value">{sub.slipName || "-"}</span>
-                          </div>
-                          <div className="detail-item">
                             <span className="detail-label">Actions</span>
                             <span className="detail-value">
                               {onUploadSlip && (
