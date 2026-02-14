@@ -84,9 +84,12 @@ export default function DashboardPage({ users = [], subscriptions = [], movieReq
 
   const paymentsReceived = useMemo(
     () =>
-      (subscriptions || []).filter((sub) =>
-        ["approved", "expired"].includes(String(sub.status || "").toLowerCase())
-      ),
+      (subscriptions || [])
+        .filter((sub) => {
+          const status = String(sub.status || "").toLowerCase();
+          if (!["approved", "expired"].includes(status)) return false;
+          return Number(sub.price || sub.finalAmount || 0) > 0;
+        }),
     [subscriptions]
   );
   const paymentsTotals = useMemo(() => sumByCurrency(paymentsReceived), [paymentsReceived]);

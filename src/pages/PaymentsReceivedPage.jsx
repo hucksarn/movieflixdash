@@ -72,7 +72,10 @@ export default function PaymentsReceivedPage({
       subscriptions
         .filter((sub) => {
           const status = String(sub.status || "").toLowerCase();
-          return status === "approved" || status === "expired" || status === "rejected";
+          if (!(status === "approved" || status === "expired" || status === "rejected")) {
+            return false;
+          }
+          return Number(sub.price || sub.finalAmount || 0) > 0;
         })
         .sort(
           (a, b) =>
