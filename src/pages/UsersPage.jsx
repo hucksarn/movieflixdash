@@ -679,14 +679,12 @@ export default function UsersPage({
           <tbody>
             {sortedRows.map((row) => {
               const { user, subRow, playStatus } = row;
-              const draftDaysLeft =
-                draftEnd || draftStart ? calcDaysLeft(draftEnd || subRow.endDate) : subRow.daysLeft;
               const daysLeft =
-                typeof draftDaysLeft === "number" && draftDaysLeft < 0
+                typeof subRow.daysLeft === "number" && subRow.daysLeft < 0
                   ? "NONE"
-                  : draftDaysLeft === "-"
+                  : subRow.daysLeft === "-"
                     ? "-"
-                    : String(draftDaysLeft);
+                    : String(subRow.daysLeft);
               const userId = user.Id || user.id || user.Name;
               const startValue = toInputDate(subRow.startDate);
               const endValue = toInputDate(subRow.endDate);
@@ -856,9 +854,9 @@ export default function UsersPage({
                           <div className="detail-item">
                             <span className="detail-label">Days left</span>
                             <span className="detail-value">
-                              {typeof draftDaysLeft === "number" && draftDaysLeft < 0
+                              {typeof subRow.daysLeft === "number" && subRow.daysLeft < 0
                                 ? "NONE"
-                                : draftDaysLeft}
+                                : subRow.daysLeft}
                             </span>
                           </div>
                         </>
