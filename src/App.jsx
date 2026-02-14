@@ -1535,8 +1535,30 @@ export default function App() {
             .map((user) => String(user?.Name || user?.name || "").toLowerCase())
             .filter(Boolean)
         );
+        const prevNameToId = new Map();
+        const currentNameToId = new Map();
+        syncedUsers.forEach((user) => {
+          const id = user?.Id || user?.id || "";
+          const name = String(user?.Name || user?.name || "").toLowerCase();
+          if (name && id) prevNameToId.set(name, id);
+        });
+        adjustedUsers.forEach((user) => {
+          const id = user?.Id || user?.id || "";
+          const name = String(user?.Name || user?.name || "").toLowerCase();
+          if (name && id) currentNameToId.set(name, id);
+        });
+
         const removedIds = new Set();
         const removedNames = new Set();
+        const replacedNames = new Set();
+        prevNameToId.forEach((prevId, name) => {
+          const currentId = currentNameToId.get(name);
+          if (currentId && currentId !== prevId) {
+            removedIds.add(prevId);
+            replacedNames.add(name);
+          }
+        });
+
         syncedUsers.forEach((user) => {
           const id = user?.Id || user?.id || "";
           const name = String(user?.Name || user?.name || "").toLowerCase();
@@ -1549,7 +1571,7 @@ export default function App() {
             const key = sub?.userId || sub?.userKey || "";
             const name = String(sub?.username || "").toLowerCase();
             if (key && removedIds.has(key)) return false;
-            if (name && removedNames.has(name)) return false;
+            if (!key && name && (removedNames.has(name) || replacedNames.has(name))) return false;
             return true;
           });
           if (nextSubs.length !== subscriptions.length) {
@@ -1562,7 +1584,9 @@ export default function App() {
             const key = item?.key || item?.userId || "";
             const name = String(item?.username || "").toLowerCase();
             if (key && removedIds.has(key)) return false;
-            if (name && removedNames.has(name)) return false;
+            if (!item?.userId && name && (removedNames.has(name) || replacedNames.has(name))) {
+              return false;
+            }
             return true;
           });
           if (nextUnlimited.length !== unlimitedUsers.length) {
@@ -1585,6 +1609,12 @@ export default function App() {
               tagsChanged = true;
             }
           });
+          replacedNames.forEach((name) => {
+            if (nextTags[name]) {
+              delete nextTags[name];
+              tagsChanged = true;
+            }
+          });
           if (tagsChanged) {
             saveUserTags(nextTags);
             setUserTags(nextTags);
@@ -1593,7 +1623,7 @@ export default function App() {
 
           const nextRequests = movieRequests.filter((request) => {
             const name = String(request?.requestedBy || "").toLowerCase();
-            if (name && removedNames.has(name)) return false;
+            if (name && (removedNames.has(name) || replacedNames.has(name))) return false;
             return true;
           });
           if (nextRequests.length !== movieRequests.length) {
