@@ -3487,12 +3487,25 @@ input:focus {
     display: none;
   }
 
+  .payments-received-page colgroup,
+  .payments-received-page col {
+    display: none;
+  }
+
   .payments-received-page .table,
   .payments-received-page .table tbody,
   .payments-received-page .table tr,
   .payments-received-page .table td {
     display: block;
     width: 100%;
+  }
+
+  .payments-received-page .table {
+    min-width: 0;
+  }
+
+  .payments-received-page .table-wrap {
+    overflow-x: hidden;
   }
 
   .payments-received-page .table tr {
