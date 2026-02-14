@@ -177,6 +177,20 @@ const isCloudflaredRunning = () => {
       // ignore
     }
   }
+  try {
+    const output = execFileSync("ps", ["-ef"], { encoding: "utf-8" });
+    return output
+      .split("\n")
+      .some(
+        (line) =>
+          line.includes("cloudflared") &&
+          line.includes("tunnel") &&
+          line.includes("run") &&
+          !line.includes("grep")
+      );
+  } catch {
+    // ignore ps errors
+  }
   return false;
 };
 
