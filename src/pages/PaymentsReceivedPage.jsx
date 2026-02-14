@@ -51,6 +51,7 @@ export default function PaymentsReceivedPage({
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [amountDrafts, setAmountDrafts] = useState({});
   const [showManualModal, setShowManualModal] = useState(false);
+  const [editingAmountId, setEditingAmountId] = useState(null);
   const [manualForm, setManualForm] = useState({
     username: "",
     planId: "",
@@ -101,6 +102,7 @@ export default function PaymentsReceivedPage({
     const actualPaid = raw === "" || raw === undefined ? null : Number(raw);
     if (actualPaid === null || !Number.isFinite(actualPaid)) return;
     onUpdatePaymentAmount(sub.id, actualPaid);
+    setEditingAmountId(null);
   };
 
   const handleManualSlip = (event) => {
@@ -355,6 +357,7 @@ export default function PaymentsReceivedPage({
             (sub.finalAmount !== undefined && sub.finalAmount !== null
               ? String(sub.finalAmount)
               : String(sub.price || ""));
+          const amountLabel = formatAmount(sub);
           return (
             <div className="payment-card" key={rowId}>
               <div className="payment-row">
@@ -374,7 +377,7 @@ export default function PaymentsReceivedPage({
               <div className="payment-row">
                 <span className="payment-label">Amount</span>
                 <span className="payment-value">
-                  {onUpdatePaymentAmount ? (
+                  {editingAmountId === sub.id && onUpdatePaymentAmount ? (
                     <input
                       type="number"
                       min="0"
@@ -388,10 +391,14 @@ export default function PaymentsReceivedPage({
                           event.preventDefault();
                           commitAmount(sub);
                         }
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          setEditingAmountId(null);
+                        }
                       }}
                     />
                   ) : (
-                    formatAmount(sub)
+                    amountLabel
                   )}
                 </span>
               </div>
@@ -459,6 +466,21 @@ export default function PaymentsReceivedPage({
                   >
                     Delete
                   </button>
+                  {onUpdatePaymentAmount && (
+                    <button
+                      type="button"
+                      className="btn ghost tiny"
+                      onClick={() => {
+                        setEditingAmountId(sub.id);
+                        setAmountDrafts((prev) => ({
+                          ...prev,
+                          [sub.id]: currentAmount,
+                        }));
+                      }}
+                    >
+                      Edit Amount
+                    </button>
+                  )}
                 </span>
               </div>
             </div>
