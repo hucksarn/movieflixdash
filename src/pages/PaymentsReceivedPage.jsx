@@ -176,21 +176,27 @@ export default function PaymentsReceivedPage({
         String(user?.Name || user?.name || "").toLowerCase() === username.toLowerCase()
     );
 
-    const saved = onAddManualPayment({
-      userKey: username.toLowerCase(),
-      userId: matchedUser?.Id || matchedUser?.id || "",
-      username,
-      planId: plan.id,
-      planName: plan.name,
-      durationDays: Number(plan.durationDays || plan.duration || 0),
-      price: plan.price,
-      currency: plan.currency || "MVR",
-      finalAmount: amount,
-      startDate: new Date(manualForm.startDate).toISOString(),
-      endDate: new Date(manualForm.endDate).toISOString(),
-      slipName: manualForm.slipName,
-      slipData: manualForm.slipData,
-    });
+    let saved = false;
+    try {
+      saved = onAddManualPayment({
+        userKey: username.toLowerCase(),
+        userId: matchedUser?.Id || matchedUser?.id || "",
+        username,
+        planId: plan.id,
+        planName: plan.name,
+        durationDays: Number(plan.durationDays || plan.duration || 0),
+        price: plan.price,
+        currency: plan.currency || "MVR",
+        finalAmount: amount,
+        startDate: new Date(manualForm.startDate).toISOString(),
+        endDate: new Date(manualForm.endDate).toISOString(),
+        slipName: manualForm.slipName,
+        slipData: manualForm.slipData,
+      });
+    } catch (err) {
+      setManualMessage(err?.message || "Save failed. Please try again.");
+      return;
+    }
 
     if (!saved) {
       setManualMessage("Save failed. Please try again.");
