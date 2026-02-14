@@ -2267,11 +2267,11 @@ export default function App() {
             />
             <Route
               path="/"
-              element={<Navigate to={isAdmin ? "/settings" : "/dashboard"} replace />}
+              element={<Navigate to="/dashboard" replace />}
             />
             <Route
               path="*"
-              element={<Navigate to={isAdmin ? "/settings" : "/dashboard"} replace />}
+              element={<Navigate to="/dashboard" replace />}
             />
             </Routes>
             </div>
