@@ -3483,6 +3483,43 @@ input:focus {
     white-space: nowrap;
   }
 
+  .payments-received-page .table thead {
+    display: none;
+  }
+
+  .payments-received-page .table,
+  .payments-received-page .table tbody,
+  .payments-received-page .table tr,
+  .payments-received-page .table td {
+    display: block;
+    width: 100%;
+  }
+
+  .payments-received-page .table tr {
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 10px;
+    background: rgba(15, 22, 39, 0.55);
+  }
+
+  .payments-received-page .table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 0;
+    white-space: normal;
+  }
+
+  .payments-received-page .table td::before {
+    content: attr(data-label);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
   .payments-received-page .col-received-user,
   .payments-received-page .col-received-plan {
     max-width: 160px;
