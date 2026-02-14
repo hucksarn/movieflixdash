@@ -406,7 +406,20 @@ export default function PaymentsReceivedPage({
               return (
                 <Fragment key={rowId}>
                   <tr>
-                    <td className="col-received-date" data-label="Date">
+                    <td
+                      className="col-received-date"
+                      data-label="Date"
+                      onClick={() => {
+                        if (!onUpdatePaymentDate) return;
+                        setEditingDateId(sub.id);
+                        setDateDrafts((prev) => ({
+                          ...prev,
+                          [sub.id]: dateInput,
+                        }));
+                      }}
+                      style={{ cursor: onUpdatePaymentDate ? "pointer" : "default" }}
+                      title={onUpdatePaymentDate ? "Click to edit date" : undefined}
+                    >
                       {editingDateId === sub.id && onUpdatePaymentDate ? (
                         <input
                           type="date"
@@ -428,6 +441,7 @@ export default function PaymentsReceivedPage({
                               setEditingDateId(null);
                             }
                           }}
+                          onClick={(event) => event.stopPropagation()}
                         />
                       ) : (
                         dateValue
@@ -550,21 +564,6 @@ export default function PaymentsReceivedPage({
                           <div className="detail-item">
                             <span className="detail-label">Actions</span>
                             <span className="detail-value">
-                              {onUpdatePaymentDate && (
-                                <button
-                                  type="button"
-                                  className="btn ghost tiny"
-                                  onClick={() => {
-                                    setEditingDateId(sub.id);
-                                    setDateDrafts((prev) => ({
-                                      ...prev,
-                                      [sub.id]: dateInput,
-                                    }));
-                                  }}
-                                >
-                                  Edit Date
-                                </button>
-                              )}
                               {onUploadSlip && (
                                 <label className="btn ghost tiny">
                                   {slipUrl ? "Replace Slip" : "Upload Slip"}
