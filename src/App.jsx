@@ -2222,7 +2222,7 @@ export default function App() {
         {!session && sessionReady && (
           <section className="card">
             <h1>Sign in</h1>
-            <p className="muted">Use Emby credentials or the local admin account.</p>
+            <p className="muted">Please use your use Emby credentials</p>
             <form onSubmit={handleLogin} className="stack" autoComplete="off">
               <label>
                 Username
