@@ -205,7 +205,8 @@ export default function PaymentsReceivedPage({
       slipName: "",
       slipData: "",
     });
-    setManualMessage("Manual payment saved.");
+    setManualMessage("Saved successfully.");
+    setTimeout(() => setManualMessage(""), 2000);
     setShowManualModal(false);
   };
 
@@ -363,7 +364,11 @@ export default function PaymentsReceivedPage({
                 </label>
                 {manualForm.slipName && <span className="muted">{manualForm.slipName}</span>}
               </div>
-              {manualMessage && <div className="note">{manualMessage}</div>}
+              {manualMessage && (
+                <div className={`note ${manualMessage.toLowerCase().includes("failed") ? "danger" : "success"}`}>
+                  {manualMessage}
+                </div>
+              )}
               <div className="modal-actions">
                 <button
                   type="button"

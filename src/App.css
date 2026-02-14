@@ -777,6 +777,14 @@ input:focus {
   border-radius: 10px;
 }
 
+.note.danger {
+  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
 .muted {
   color: var(--muted);
 }
