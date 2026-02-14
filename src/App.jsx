@@ -84,10 +84,18 @@ const normalizeSubscriptions = (subs) => {
   });
 };
 
+const sanitizeSubscriptionsForStorage = (subs) =>
+  (subs || []).map((sub) => {
+    const { slipData, ...rest } = sub || {};
+    return rest;
+  });
 const getSubscriptions = () =>
   normalizeSubscriptions(JSON.parse(localStorage.getItem(LS_SUBSCRIPTIONS) || "[]"));
 const saveSubscriptions = (subs) =>
-  localStorage.setItem(LS_SUBSCRIPTIONS, JSON.stringify(subs));
+  localStorage.setItem(
+    LS_SUBSCRIPTIONS,
+    JSON.stringify(sanitizeSubscriptionsForStorage(subs))
+  );
 const getUnlimitedUsers = () =>
   JSON.parse(localStorage.getItem(LS_UNLIMITED_USERS) || "[]");
 const saveUnlimitedUsers = (list) =>
