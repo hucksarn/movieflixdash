@@ -50,6 +50,7 @@ export default function PaymentsReceivedPage({
   const [openSlip, setOpenSlip] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [amountDrafts, setAmountDrafts] = useState({});
+  const [showManualModal, setShowManualModal] = useState(false);
   const [manualForm, setManualForm] = useState({
     username: "",
     planId: "",
@@ -177,136 +178,171 @@ export default function PaymentsReceivedPage({
       slipData: "",
     });
     setManualMessage("Manual payment saved.");
+    setShowManualModal(false);
   };
 
   return (
     <section className="card payments-received-page">
       <div className="card-header">
         <h2>Payments Received</h2>
-        <div className="count">{approved.length} total</div>
+        <div className="row">
+          <div className="count">{approved.length} total</div>
+          {onAddManualPayment && (
+            <button
+              className="btn ghost small"
+              type="button"
+              onClick={() => setShowManualModal(true)}
+            >
+              Add Payment
+            </button>
+          )}
+        </div>
       </div>
 
-      {onAddManualPayment && (
-        <div className="form-card">
-          <div className="section-title">Add Manual Payment</div>
-          <form className="stack" onSubmit={handleManualSubmit}>
-            <div className="grid-2">
-              <label>
-                Username
-                <input
-                  type="text"
-                  value={manualForm.username}
-                  onChange={(event) =>
-                    setManualForm((prev) => ({ ...prev, username: event.target.value }))
-                  }
-                  placeholder="User name"
-                  list="manual-payment-users"
-                />
-              </label>
-              <datalist id="manual-payment-users">
-                {users.map((user) => {
-                  const name = user?.Name || user?.name || "";
-                  if (!name) return null;
-                  return <option key={user.Id || user.id || name} value={name} />;
-                })}
-              </datalist>
-              <label>
-                Plan
-                <select
-                  className="select"
-                  value={manualForm.planId}
-                  onChange={(event) =>
-                    setManualForm((prev) => {
-                      const nextPlanId = event.target.value;
-                      const plan = plans.find((item) => item.id === nextPlanId);
-                      const days = Number(plan?.durationDays || plan?.duration || 0);
-                      let nextEnd = prev.endDate;
-                      if (prev.startDate && days) {
-                        const start = new Date(prev.startDate);
-                        if (!Number.isNaN(start.getTime())) {
-                          const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
-                          nextEnd = end.toISOString().slice(0, 10);
+      {onAddManualPayment && showManualModal && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setShowManualModal(false)}
+        >
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <div>
+                <h3>Add Manual Payment</h3>
+                <div className="muted">Record payment without requiring a slip.</div>
+              </div>
+            </div>
+            <form className="modal-body stack" onSubmit={handleManualSubmit}>
+              <div className="grid-2">
+                <label>
+                  Username
+                  <input
+                    type="text"
+                    value={manualForm.username}
+                    onChange={(event) =>
+                      setManualForm((prev) => ({ ...prev, username: event.target.value }))
+                    }
+                    placeholder="User name"
+                    list="manual-payment-users"
+                  />
+                </label>
+                <datalist id="manual-payment-users">
+                  {users.map((user) => {
+                    const name = user?.Name || user?.name || "";
+                    if (!name) return null;
+                    return <option key={user.Id || user.id || name} value={name} />;
+                  })}
+                </datalist>
+                <label>
+                  Plan
+                  <select
+                    className="select"
+                    value={manualForm.planId}
+                    onChange={(event) =>
+                      setManualForm((prev) => {
+                        const nextPlanId = event.target.value;
+                        const plan = plans.find((item) => item.id === nextPlanId);
+                        const days = Number(plan?.durationDays || plan?.duration || 0);
+                        let nextEnd = prev.endDate;
+                        if (prev.startDate && days) {
+                          const start = new Date(prev.startDate);
+                          if (!Number.isNaN(start.getTime())) {
+                            const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+                            nextEnd = end.toISOString().slice(0, 10);
+                          }
                         }
-                      }
-                      return { ...prev, planId: nextPlanId, endDate: nextEnd };
-                    })
-                  }
+                        return { ...prev, planId: nextPlanId, endDate: nextEnd };
+                      })
+                    }
+                  >
+                    <option value="">Select plan</option>
+                    {plans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name} ({plan.durationDays || plan.duration || 0} days)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Amount Paid
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={manualForm.amount}
+                    onChange={(event) =>
+                      setManualForm((prev) => ({ ...prev, amount: event.target.value }))
+                    }
+                    placeholder="0.00"
+                  />
+                </label>
+                <label>
+                  Start Date
+                  <input
+                    type="date"
+                    value={manualForm.startDate}
+                    onChange={(event) =>
+                      setManualForm((prev) => {
+                        const nextStart = event.target.value;
+                        const plan = plans.find((item) => item.id === prev.planId);
+                        const days = Number(plan?.durationDays || plan?.duration || 0);
+                        let nextEnd = prev.endDate;
+                        if (nextStart && days) {
+                          const start = new Date(nextStart);
+                          if (!Number.isNaN(start.getTime())) {
+                            const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+                            nextEnd = end.toISOString().slice(0, 10);
+                          }
+                        }
+                        return { ...prev, startDate: nextStart, endDate: nextEnd };
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  End Date
+                  <input
+                    type="date"
+                    value={manualForm.endDate}
+                    onChange={(event) =>
+                      setManualForm((prev) => ({ ...prev, endDate: event.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+              <div className="row">
+                <label className="btn ghost small">
+                  {manualForm.slipName ? "Replace Slip" : "Upload Slip"}
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="file-input"
+                    onChange={handleManualSlip}
+                    hidden
+                  />
+                </label>
+                {manualForm.slipName && <span className="muted">{manualForm.slipName}</span>}
+              </div>
+              {manualMessage && <div className="note">{manualMessage}</div>}
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => setShowManualModal(false)}
                 >
-                  <option value="">Select plan</option>
-                  {plans.map((plan) => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name} ({plan.durationDays || plan.duration || 0} days)
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Amount Paid
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={manualForm.amount}
-                  onChange={(event) =>
-                    setManualForm((prev) => ({ ...prev, amount: event.target.value }))
-                  }
-                  placeholder="0.00"
-                />
-              </label>
-              <label>
-                Start Date
-                <input
-                  type="date"
-                  value={manualForm.startDate}
-                  onChange={(event) =>
-                    setManualForm((prev) => {
-                      const nextStart = event.target.value;
-                      const plan = plans.find((item) => item.id === prev.planId);
-                      const days = Number(plan?.durationDays || plan?.duration || 0);
-                      let nextEnd = prev.endDate;
-                      if (nextStart && days) {
-                        const start = new Date(nextStart);
-                        if (!Number.isNaN(start.getTime())) {
-                          const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
-                          nextEnd = end.toISOString().slice(0, 10);
-                        }
-                      }
-                      return { ...prev, startDate: nextStart, endDate: nextEnd };
-                    })
-                  }
-                />
-              </label>
-              <label>
-                End Date
-                <input
-                  type="date"
-                  value={manualForm.endDate}
-                  onChange={(event) =>
-                    setManualForm((prev) => ({ ...prev, endDate: event.target.value }))
-                  }
-                />
-              </label>
-            </div>
-            <div className="row">
-              <label className="btn ghost small">
-                {manualForm.slipName ? "Replace Slip" : "Upload Slip"}
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="file-input"
-                  onChange={handleManualSlip}
-                  hidden
-                />
-              </label>
-              {manualForm.slipName && <span className="muted">{manualForm.slipName}</span>}
-            </div>
-            {manualMessage && <div className="note">{manualMessage}</div>}
-            <div className="row">
-              <button className="btn small" type="submit">
-                Save Manual Payment
-              </button>
-            </div>
-          </form>
+                  Cancel
+                </button>
+                <button className="btn" type="submit">
+                  Save Payment
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
       <div className="table-wrap payments-received-table">
