@@ -267,10 +267,57 @@ const syncPlaybackLibraries = async () => {
     (Array.isArray(value) ? value : []).map(String).filter(Boolean).sort();
 
   let updated = 0;
+  const disableAutoTrial = Boolean(settings?.disableAutoTrial);
+  const nowIso = new Date().toISOString();
+  const addDays = (iso, days) => {
+    const base = new Date(iso);
+    if (Number.isNaN(base.getTime())) return iso;
+    base.setUTCDate(base.getUTCDate() + days);
+    return base.toISOString();
+  };
+  const subscriptionsByUser = new Map();
+  (subscriptions || []).forEach((sub) => {
+    const key = sub?.userId || sub?.userKey || "";
+    if (!key) return;
+    const time = new Date(sub.endDate || sub.submittedAt || 0).getTime();
+    const existing = subscriptionsByUser.get(key);
+    if (!existing || time >= existing.time) {
+      subscriptionsByUser.set(key, { sub, time });
+    }
+  });
   for (const user of users) {
     const userId = user?.Id || user?.id;
     const policy = user?.Policy || {};
     if (!userId) continue;
+
+    if (!disableAutoTrial && !isUnlimitedUser(user, unlimitedUsers)) {
+      const latest = subscriptionsByUser.get(userId)?.sub;
+      const hasApproved = latest?.status === "approved" || latest?.status === "active";
+      if (!hasApproved) {
+        const trial = {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          userKey: userId,
+          userId,
+          username: user?.Name || user?.name || "Unknown",
+          planId: "auto-trial-30",
+          planName: "Auto Trial",
+          durationDays: 30,
+          price: 0,
+          currency: "MVR",
+          status: "approved",
+          submittedAt: nowIso,
+          startDate: nowIso,
+          endDate: addDays(nowIso, 30),
+          source: "auto",
+        };
+        subscriptions.push(trial);
+        subscriptionsByUser.set(userId, {
+          sub: trial,
+          time: new Date(trial.endDate).getTime(),
+        });
+        writeJson(subscriptionsFile, subscriptions);
+      }
+    }
 
     const status = getUserSubscriptionStatus(subscriptions, user);
     const unlimited = isUnlimitedUser(user, unlimitedUsers);
