@@ -187,8 +187,81 @@ const syncPlaybackLibraries = async () => {
     users = [];
   }
 
+  const currentIds = new Set(
+    (users || []).map((user) => user?.Id || user?.id || "").filter(Boolean)
+  );
+  const currentNames = new Set(
+    (users || [])
+      .map((user) => String(user?.Name || user?.name || "").toLowerCase())
+      .filter(Boolean)
+  );
+
   const subscriptions = readJson(subscriptionsFile, []);
   const unlimitedUsers = readJson(unlimitedFile, []);
+  const userTags = readJson(tagsFile, {});
+  const movieRequests = readJson(movieRequestsFile, []);
+
+  const pruneByUsers = () => {
+    let changed = false;
+
+    const nextSubs = (subscriptions || []).filter((sub) => {
+      const key = sub?.userId || sub?.userKey || "";
+      const name = String(sub?.username || "").toLowerCase();
+      if (key && !currentIds.has(key)) return false;
+      if (!key && name && !currentNames.has(name)) return false;
+      return true;
+    });
+    if (nextSubs.length !== (subscriptions || []).length) {
+      writeJson(subscriptionsFile, nextSubs);
+      changed = true;
+    }
+
+    const nextUnlimited = (unlimitedUsers || []).filter((item) => {
+      const key = item?.userId || item?.key || "";
+      const name = String(item?.username || "").toLowerCase();
+      if (key && !currentIds.has(key)) return false;
+      if (!item?.userId && name && !currentNames.has(name)) return false;
+      return true;
+    });
+    if (nextUnlimited.length !== (unlimitedUsers || []).length) {
+      writeJson(unlimitedFile, nextUnlimited);
+      changed = true;
+    }
+
+    if (userTags && typeof userTags === "object") {
+      const nextTags = { ...userTags };
+      let tagsChanged = false;
+      Object.keys(nextTags).forEach((key) => {
+        const lower = key.toLowerCase();
+        const isId = currentIds.has(key);
+        const isName = currentNames.has(lower);
+        if (!isId && !isName) {
+          delete nextTags[key];
+          tagsChanged = true;
+        }
+      });
+      if (tagsChanged) {
+        writeJson(tagsFile, nextTags);
+        changed = true;
+      }
+    }
+
+    const nextRequests = (movieRequests || []).filter((req) => {
+      const name = String(req?.requestedBy || "").toLowerCase();
+      if (name && !currentNames.has(name)) return false;
+      return true;
+    });
+    if (nextRequests.length !== (movieRequests || []).length) {
+      writeJson(movieRequestsFile, nextRequests);
+      changed = true;
+    }
+
+    if (changed) {
+      writeLog(embyProxyLog, "policy-sync pruned deleted users from dashboard data");
+    }
+  };
+
+  pruneByUsers();
 
   const normalizeList = (value) =>
     (Array.isArray(value) ? value : []).map(String).filter(Boolean).sort();
