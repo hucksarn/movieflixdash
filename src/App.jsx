@@ -1510,13 +1510,13 @@ export default function App() {
               username: user.Name || user.name || "Unknown",
               planId: "auto-trial-30",
               planName: "Auto Trial",
-              durationDays: 30,
+              durationDays: 7,
               price: 0,
               currency: "MVR",
               status: "approved",
               submittedAt: nowIso,
               startDate: nowIso,
-              endDate: addDays(nowIso, 30),
+              endDate: addDays(nowIso, 7),
               source: "auto",
             });
             changed = true;

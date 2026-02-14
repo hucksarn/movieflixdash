@@ -299,15 +299,15 @@ const syncPlaybackLibraries = async () => {
           userKey: userId,
           userId,
           username: user?.Name || user?.name || "Unknown",
-          planId: "auto-trial-30",
+          planId: "auto-trial-7",
           planName: "Auto Trial",
-          durationDays: 30,
+          durationDays: 7,
           price: 0,
           currency: "MVR",
           status: "approved",
           submittedAt: nowIso,
           startDate: nowIso,
-          endDate: addDays(nowIso, 30),
+          endDate: addDays(nowIso, 7),
           source: "auto",
         };
         subscriptions.push(trial);
