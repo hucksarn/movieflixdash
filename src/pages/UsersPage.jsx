@@ -437,12 +437,21 @@ export default function UsersPage({
     [normalUsers, subscriptions]
   );
 
+  const activeList = useMemo(
+    () =>
+      normalUsers.filter((user) => {
+        const subRow = getUserSubscriptionRow(subscriptions, user);
+        return subRow.status === "Active";
+      }),
+    [normalUsers, subscriptions]
+  );
+
   const visibleUsers =
     activeTab === "unlimited"
       ? unlimitedList
       : activeTab === "expired"
         ? expiredList
-        : normalUsers;
+        : activeList;
   const normalizedSearch = userSearch.trim().toLowerCase();
   const filteredUsers = useMemo(() => {
     if (!normalizedSearch) return visibleUsers;
