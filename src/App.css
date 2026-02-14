@@ -1466,6 +1466,42 @@ input:focus {
   text-overflow: ellipsis;
 }
 
+.payments-received-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.payment-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(15, 22, 39, 0.55);
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.payment-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.payment-value {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+}
+
 .payments-received-page .table thead th {
   position: sticky;
   top: 0;
