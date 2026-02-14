@@ -704,7 +704,11 @@ export default function UsersPage({
               const tagKey = getTagKeyForUser(user);
               const nameKey = (user.Name || user.name || user.username || "").toLowerCase();
               const rawTags = userTags?.[tagKey] || (nameKey && userTags?.[nameKey]) || [];
-              const tags = Array.isArray(rawTags) ? rawTags : [];
+              const tags = Array.isArray(rawTags)
+                ? rawTags
+                    .map((tag) => String(tag || "").trim().toLowerCase())
+                    .filter(Boolean)
+                : [];
 
             const isExpanded = expandedUserId === userId;
 

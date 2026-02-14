@@ -92,11 +92,29 @@ const getUnlimitedUsers = () =>
   JSON.parse(localStorage.getItem(LS_UNLIMITED_USERS) || "[]");
 const saveUnlimitedUsers = (list) =>
   localStorage.setItem(LS_UNLIMITED_USERS, JSON.stringify(list));
+const normalizeUserTags = (tags) => {
+  if (!tags || typeof tags !== "object") return {};
+  const next = {};
+  Object.entries(tags).forEach(([key, list]) => {
+    const normalized = Array.from(
+      new Set(
+        (Array.isArray(list) ? list : [])
+          .map((tag) => String(tag || "").trim().toLowerCase())
+          .filter(Boolean)
+      )
+    );
+    if (normalized.length > 0) {
+      next[key] = normalized;
+    }
+  });
+  return next;
+};
+
 const getUserTags = () => {
   const raw = localStorage.getItem(LS_USER_TAGS) || "{}";
   try {
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
+    return normalizeUserTags(parsed);
   } catch {
     return {};
   }
@@ -656,8 +674,9 @@ export default function App() {
         const serverData = await fetchServerUserTags();
         if (!mounted || !serverData || typeof serverData !== "object") return;
         const localData = getUserTags();
+        const normalizedServer = normalizeUserTags(serverData);
         const serverHasKeys = Object.keys(serverData).length > 0;
-        const next = serverHasKeys ? serverData : localData;
+        const next = serverHasKeys ? normalizedServer : localData;
         if (next && Object.keys(next).length > 0 && !serverHasKeys) {
           saveServerUserTags(next).catch(() => {});
         }
