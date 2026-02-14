@@ -60,7 +60,7 @@ export default function PaymentsReceivedPage({
     username: "",
     planId: "",
     amount: "",
-    startDate: "",
+    startDate: new Date().toISOString().slice(0, 10),
     endDate: "",
     slipName: "",
     slipData: "",
@@ -191,7 +191,7 @@ export default function PaymentsReceivedPage({
       username: "",
       planId: "",
       amount: "",
-      startDate: "",
+      startDate: new Date().toISOString().slice(0, 10),
       endDate: "",
       slipName: "",
       slipData: "",
@@ -259,26 +259,30 @@ export default function PaymentsReceivedPage({
                 </datalist>
                 <label>
                   Plan
-                  <select
-                    className="select"
-                    value={manualForm.planId}
-                    onChange={(event) =>
-                      setManualForm((prev) => {
-                        const nextPlanId = event.target.value;
-                        const plan = plans.find((item) => item.id === nextPlanId);
-                        const days = Number(plan?.durationDays || plan?.duration || 0);
-                        let nextEnd = prev.endDate;
-                        if (prev.startDate && days) {
-                          const start = new Date(prev.startDate);
-                          if (!Number.isNaN(start.getTime())) {
-                            const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
-                            nextEnd = end.toISOString().slice(0, 10);
-                          }
+                <select
+                  className="select"
+                  value={manualForm.planId}
+                  onChange={(event) =>
+                    setManualForm((prev) => {
+                      const nextPlanId = event.target.value;
+                      const plan = plans.find((item) => item.id === nextPlanId);
+                      const days = Number(plan?.durationDays || plan?.duration || 0);
+                      let nextEnd = prev.endDate;
+                      let nextAmount = prev.amount;
+                      if (prev.startDate && days) {
+                        const start = new Date(prev.startDate);
+                        if (!Number.isNaN(start.getTime())) {
+                          const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+                          nextEnd = end.toISOString().slice(0, 10);
                         }
-                        return { ...prev, planId: nextPlanId, endDate: nextEnd };
-                      })
-                    }
-                  >
+                      }
+                      if (plan?.price !== undefined && plan?.price !== null) {
+                        nextAmount = String(plan.price);
+                      }
+                      return { ...prev, planId: nextPlanId, endDate: nextEnd, amount: nextAmount };
+                    })
+                  }
+                >
                     <option value="">Select plan</option>
                     {plans.map((plan) => (
                       <option key={plan.id} value={plan.id}>
