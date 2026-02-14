@@ -679,12 +679,6 @@ export default function UsersPage({
           <tbody>
             {sortedRows.map((row) => {
               const { user, subRow, playStatus } = row;
-              const userId = user.Id || user.id || user.Name;
-              const startValue = toInputDate(subRow.startDate);
-              const endValue = toInputDate(subRow.endDate);
-              const draft = dateDrafts[userId] || {};
-              const draftStart = draft.startDate ?? startValue;
-              const draftEnd = draft.endDate ?? endValue;
               const draftDaysLeft =
                 draftEnd || draftStart ? calcDaysLeft(draftEnd || subRow.endDate) : subRow.daysLeft;
               const daysLeft =
@@ -693,6 +687,12 @@ export default function UsersPage({
                   : draftDaysLeft === "-"
                     ? "-"
                     : String(draftDaysLeft);
+              const userId = user.Id || user.id || user.Name;
+              const startValue = toInputDate(subRow.startDate);
+              const endValue = toInputDate(subRow.endDate);
+              const draft = dateDrafts[userId] || {};
+              const draftStart = draft.startDate ?? startValue;
+              const draftEnd = draft.endDate ?? endValue;
               const hasDraftChanges =
                 (draftStart || "") !== (startValue || "") || (draftEnd || "") !== (endValue || "");
               const markedUnlimited = isMarkedUnlimited(user);
