@@ -10,12 +10,31 @@ const formatDate = (value) => {
 };
 
 const formatAmount = (sub) => {
-  const amount = Number(sub?.price || sub?.finalAmount || 0);
+  const amount = Number(
+    sub?.finalAmount !== undefined && sub?.finalAmount !== null ? sub.finalAmount : sub?.price || 0
+  );
   const rawCurrency = sub?.currency || "MVR";
   const currency = rawCurrency === "USD" ? "MVR" : rawCurrency;
   const formatted = Number.isFinite(amount)
     ? amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : "0.00";
+  return `${currency} ${formatted}`;
+};
+
+const formatDiscount = (sub) => {
+  const price = Number(sub?.price || 0);
+  const actual = Number(
+    sub?.finalAmount !== undefined && sub?.finalAmount !== null ? sub.finalAmount : sub?.price || 0
+  );
+  if (!Number.isFinite(price) || !Number.isFinite(actual)) return "-";
+  const diff = price - actual;
+  if (diff <= 0) return "-";
+  const rawCurrency = sub?.currency || "MVR";
+  const currency = rawCurrency === "USD" ? "MVR" : rawCurrency;
+  const formatted = diff.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   return `${currency} ${formatted}`;
 };
 
@@ -70,6 +89,7 @@ export default function PaymentsReceivedPage({
             <col className="col-received-user" />
             <col className="col-received-plan" />
             <col className="col-received-amount" />
+            <col className="col-received-discount" />
             <col className="col-received-status" />
             <col className="col-received-slip" />
             <col className="col-received-actions" />
@@ -80,6 +100,7 @@ export default function PaymentsReceivedPage({
               <th>User</th>
               <th>Plan</th>
               <th>Amount</th>
+              <th>Discount</th>
               <th>Status</th>
               <th>Slip</th>
               <th>Actions</th>
@@ -104,6 +125,9 @@ export default function PaymentsReceivedPage({
                     </td>
                     <td className="col-received-amount" data-label="Amount">
                       {formatAmount(sub)}
+                    </td>
+                    <td className="col-received-discount" data-label="Discount">
+                      {formatDiscount(sub)}
                     </td>
                     <td className="col-received-status" data-label="Status">
                       {String(sub.status || "-").toUpperCase()}
@@ -167,7 +191,7 @@ export default function PaymentsReceivedPage({
             })}
             {approved.length === 0 && (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={8}>
                   <div className="empty-state">
                     <div className="empty-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

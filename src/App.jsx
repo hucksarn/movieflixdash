@@ -1337,7 +1337,7 @@ export default function App() {
     });
   };
 
-  const handleApproveSubscription = (subId) => {
+  const handleApproveSubscription = (subId, actualAmount) => {
     const target = subscriptions.find((sub) => sub.id === subId);
     if (!target) return;
     const days = Number(target.durationDays || target.duration || 0) || 30;
@@ -1369,6 +1369,12 @@ export default function App() {
     const endDate = addDays(baseEndIso, days);
 
     const approvedAt = new Date().toISOString();
+    const planPrice = Number(target.price || 0);
+    const actualPaid =
+      typeof actualAmount === "number" && Number.isFinite(actualAmount)
+        ? actualAmount
+        : planPrice;
+    const discountAmount = planPrice - actualPaid;
     const next = subscriptions.map((sub) => {
       const matchesUser =
         sub.userId === userKey ||
@@ -1383,6 +1389,8 @@ export default function App() {
         ...sub,
         status: "approved",
         approvedAt,
+        finalAmount: actualPaid,
+        discountAmount: discountAmount > 0 ? discountAmount : 0,
         startDate,
         endDate,
         playbackDisabledAt: null,

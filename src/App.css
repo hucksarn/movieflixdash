@@ -808,6 +808,18 @@ input:focus {
   border-radius: 8px;
 }
 
+.table-input {
+  width: 100%;
+  min-width: 80px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0f1627;
+  color: var(--text);
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
 .table-wrap {
   margin-top: 18px;
   overflow-x: auto;
@@ -1414,31 +1426,35 @@ input:focus {
 }
 
 .payments-received-page .col-received-date {
-  width: 16%;
+  width: 14%;
 }
 
 .payments-received-page .col-received-user {
-  width: 20%;
+  width: 18%;
 }
 
 .payments-received-page .col-received-plan {
-  width: 22%;
+  width: 18%;
 }
 
 .payments-received-page .col-received-amount {
-  width: 16%;
+  width: 12%;
+}
+
+.payments-received-page .col-received-discount {
+  width: 12%;
 }
 
 .payments-received-page .col-received-status {
-  width: 14%;
+  width: 10%;
 }
 
 .payments-received-page .col-received-slip {
-  width: 16%;
+  width: 12%;
 }
 
 .payments-received-page .col-received-actions {
-  width: 14%;
+  width: 10%;
 }
 
 .payments-received-page .table th,
@@ -3453,31 +3469,35 @@ input:focus {
   }
 
   .payments-received-page .col-received-date {
-    width: 18%;
+    width: 16%;
   }
 
   .payments-received-page .col-received-user {
-    width: 20%;
+    width: 18%;
   }
 
   .payments-received-page .col-received-plan {
-    width: 22%;
+    width: 18%;
   }
 
   .payments-received-page .col-received-amount {
-    width: 16%;
+    width: 12%;
+  }
+
+  .payments-received-page .col-received-discount {
+    width: 12%;
   }
 
   .payments-received-page .col-received-status {
-    width: 14%;
+    width: 10%;
   }
 
   .payments-received-page .col-received-slip {
-    width: 16%;
+    width: 12%;
   }
 
   .payments-received-page .col-received-actions {
-    width: 16%;
+    width: 10%;
   }
 
   .payments-received-page .table th,

@@ -22,6 +22,17 @@ const formatAmount = (price, currency) => {
 
 export default function ApprovalsPage({ pending, onApprove, onReject }) {
   const [previewSlip, setPreviewSlip] = useState(null);
+  const [actualAmounts, setActualAmounts] = useState({});
+
+  const getActualAmount = (sub) => {
+    const stored = actualAmounts[sub.id];
+    if (stored === "" || stored === undefined) return String(sub.price || "");
+    return stored;
+  };
+
+  const handleAmountChange = (subId, value) => {
+    setActualAmounts((prev) => ({ ...prev, [subId]: value }));
+  };
 
   return (
     <section className="card">
@@ -36,6 +47,8 @@ export default function ApprovalsPage({ pending, onApprove, onReject }) {
               <th>User</th>
               <th>Plan</th>
               <th>Payment</th>
+              <th>Actual Paid</th>
+              <th>Discount</th>
               <th>Submitted</th>
               <th>Slip</th>
               <th>Status</th>
@@ -50,6 +63,26 @@ export default function ApprovalsPage({ pending, onApprove, onReject }) {
                 <td>
                   {formatAmount(sub.price, sub.currency)}
                   <div className="muted small">Paid</div>
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="table-input"
+                    value={getActualAmount(sub)}
+                    onChange={(event) => handleAmountChange(sub.id, event.target.value)}
+                  />
+                </td>
+                <td>
+                  {(() => {
+                    const planPrice = Number(sub.price || 0);
+                    const actual = Number(actualAmounts[sub.id] ?? sub.price ?? 0);
+                    if (!Number.isFinite(planPrice) || !Number.isFinite(actual)) return "-";
+                    const diff = planPrice - actual;
+                    if (diff <= 0) return "-";
+                    return formatAmount(diff, sub.currency);
+                  })()}
                 </td>
                 <td>{formatDate(sub.submittedAt)}</td>
                 <td>
@@ -78,7 +111,14 @@ export default function ApprovalsPage({ pending, onApprove, onReject }) {
                 <td>Pending</td>
                 <td>
                   <div className="actions">
-                    <button className="btn small" onClick={() => onApprove(sub.id)}>
+                    <button
+                      className="btn small"
+                      onClick={() => {
+                        const raw = actualAmounts[sub.id];
+                        const actualPaid = raw === "" || raw === undefined ? null : Number(raw);
+                        onApprove(sub.id, Number.isFinite(actualPaid) ? actualPaid : null);
+                      }}
+                    >
                       Approve
                     </button>
                     <button className="btn ghost small" onClick={() => onReject(sub.id)}>
@@ -90,7 +130,7 @@ export default function ApprovalsPage({ pending, onApprove, onReject }) {
             ))}
             {pending.length === 0 && (
               <tr>
-                <td colSpan="7">
+                <td colSpan="9">
                   <div className="empty-state">
                     <div className="empty-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
