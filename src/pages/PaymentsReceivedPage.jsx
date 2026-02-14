@@ -573,11 +573,17 @@ export default function PaymentsReceivedPage({
                           <div className="detail-item">
                             <span className="detail-label">Discount</span>
                             <span className="detail-value">
-                              {formatDiscount({
-                                ...sub,
-                                finalAmount:
-                                  amountDrafts[sub.id] ?? sub.finalAmount ?? sub.price ?? 0,
-                              })}
+                              {(() => {
+                                const price = Number(sub?.price || 0);
+                                const actual =
+                                  amountDrafts[sub.id] ?? sub.finalAmount ?? sub.price ?? 0;
+                                const paid = Number(actual || 0);
+                                const diff = price - paid;
+                                if (!Number.isFinite(diff) || diff <= 0 || price <= 0) {
+                                  return "-";
+                                }
+                                return `${Math.round((diff / price) * 100)}% off`;
+                              })()}
                             </span>
                           </div>
                           <div className="detail-item">
