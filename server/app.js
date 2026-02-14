@@ -17,6 +17,8 @@ const movieRequestsFile = path.resolve(ROOT, "movie-requests.json");
 const mediaRequestsFile = path.resolve(ROOT, "media-requests.json");
 const unlimitedFile = path.resolve(ROOT, "unlimited-users.json");
 const tagsFile = path.resolve(ROOT, "user-tags.json");
+const telegramPidFile = path.resolve(ROOT, ".pids", "telegram-bot.pid");
+const telegramLockFile = path.resolve(ROOT, "telegram-bot.lock");
 
 const clientErrorsLog = path.resolve(ROOT, "client-errors.log");
 const embyProxyLog = path.resolve(ROOT, "emby-proxy.log");
@@ -102,6 +104,37 @@ const writeLog = (filePath, line) => {
   } catch {
     // ignore log errors
   }
+};
+
+const isProcessRunning = (pid) => {
+  if (!pid || Number.isNaN(Number(pid))) return false;
+  try {
+    process.kill(Number(pid), 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const isTelegramBotRunning = () => {
+  if (fs.existsSync(telegramPidFile)) {
+    try {
+      const pid = Number(fs.readFileSync(telegramPidFile, "utf-8").trim());
+      if (isProcessRunning(pid)) return true;
+    } catch {
+      // ignore pid read errors
+    }
+  }
+  if (fs.existsSync(telegramLockFile)) {
+    try {
+      const stat = fs.statSync(telegramLockFile);
+      const ageMs = Date.now() - stat.mtimeMs;
+      return ageMs < 10 * 60 * 1000;
+    } catch {
+      // ignore stat errors
+    }
+  }
+  return false;
 };
 
 const isUnlimitedUser = (user, unlimitedList) => {
@@ -525,6 +558,59 @@ const handleClientErrors = async (req, res) => {
     // ignore log errors
   }
   sendJson(res, { ok: true });
+  return true;
+};
+
+const handleStatus = async (req, res) => {
+  if (req.method !== "GET") return false;
+  const settings = loadSettings();
+  const status = {
+    telegramBot: { running: isTelegramBotRunning() },
+    emby: { ok: false, message: "Emby URL not set." },
+    jellyseerr: { ok: false, message: "Jellyseerr URL not set." },
+    sonarr: { ok: false, message: "Sonarr URL not set." },
+    radarr: { ok: false, message: "Radarr URL not set." },
+  };
+
+  if (settings?.embyUrl && settings?.apiKey) {
+    const base = settings.embyUrl.replace(/\/+$/, "");
+    const resp = await safeFetch(`${base}/System/Info/Public?api_key=${settings.apiKey}`);
+    status.emby = resp.ok
+      ? { ok: true, message: "OK" }
+      : { ok: false, message: resp.text || `HTTP ${resp.status}` };
+  }
+
+  if (settings?.jellyseerrUrl && settings?.jellyseerrApiKey) {
+    const base = settings.jellyseerrUrl.replace(/\/+$/, "");
+    const resp = await safeFetch(`${base}/api/v1/status`, {
+      headers: { "X-Api-Key": settings.jellyseerrApiKey },
+    });
+    status.jellyseerr = resp.ok
+      ? { ok: true, message: "OK" }
+      : { ok: false, message: resp.text || `HTTP ${resp.status}` };
+  }
+
+  if (settings?.sonarrUrl && settings?.sonarrApiKey) {
+    const base = settings.sonarrUrl.replace(/\/+$/, "");
+    const resp = await safeFetch(`${base}/api/v3/system/status`, {
+      headers: { "X-Api-Key": settings.sonarrApiKey },
+    });
+    status.sonarr = resp.ok
+      ? { ok: true, message: "OK" }
+      : { ok: false, message: resp.text || `HTTP ${resp.status}` };
+  }
+
+  if (settings?.radarrUrl && settings?.radarrApiKey) {
+    const base = settings.radarrUrl.replace(/\/+$/, "");
+    const resp = await safeFetch(`${base}/api/v3/system/status`, {
+      headers: { "X-Api-Key": settings.radarrApiKey },
+    });
+    status.radarr = resp.ok
+      ? { ok: true, message: "OK" }
+      : { ok: false, message: resp.text || `HTTP ${resp.status}` };
+  }
+
+  sendJson(res, status);
   return true;
 };
 
@@ -1256,6 +1342,7 @@ const router = async (req, res) => {
   if (pathname.startsWith("/api/unlimited-users")) return await handleUnlimitedUsers(req, res);
   if (pathname.startsWith("/api/user-tags")) return await handleUserTags(req, res);
   if (pathname.startsWith("/api/client-errors")) return await handleClientErrors(req, res);
+  if (pathname.startsWith("/api/status")) return await handleStatus(req, res);
   if (pathname.startsWith("/api/emby")) return await handleEmbyProxy(req, res);
   if (pathname.startsWith("/api/jellyseerr")) return await handleJellyseerrProxy(req, res);
   if (pathname.startsWith("/api/sonarr")) {

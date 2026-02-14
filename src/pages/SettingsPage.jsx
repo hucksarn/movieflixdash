@@ -9,6 +9,9 @@ export default function SettingsPage({
   onSaveNow,
   onDiscard,
   message,
+  serverStatus,
+  serverStatusError,
+  onRefreshStatus,
   onLogout,
 }) {
   const [copyNotice, setCopyNotice] = useState("");
@@ -198,8 +201,63 @@ export default function SettingsPage({
             </div>
           </div>
         )}
-        {activeSettingsTab === "general" && (
+      {activeSettingsTab === "general" && (
         <>
+        {isAdmin && (
+          <div className="settings-group">
+            <div className="section-title">System Status</div>
+            {serverStatusError && <div className="note">{serverStatusError}</div>}
+            <div className="status-grid">
+              <div className="status-item">
+                <span className="status-label">Telegram Bot</span>
+                <span className={`status-pill ${serverStatus?.telegramBot?.running ? "ok" : "bad"}`}>
+                  {serverStatus?.telegramBot?.running ? "Running" : "Stopped"}
+                </span>
+              </div>
+              <div className="status-item">
+                <span className="status-label">Emby</span>
+                <span className={`status-pill ${serverStatus?.emby?.ok ? "ok" : "bad"}`}>
+                  {serverStatus?.emby?.ok ? "OK" : "Error"}
+                </span>
+                {!serverStatus?.emby?.ok && serverStatus?.emby?.message && (
+                  <span className="status-note">{serverStatus.emby.message}</span>
+                )}
+              </div>
+              <div className="status-item">
+                <span className="status-label">Jellyseerr</span>
+                <span className={`status-pill ${serverStatus?.jellyseerr?.ok ? "ok" : "bad"}`}>
+                  {serverStatus?.jellyseerr?.ok ? "OK" : "Error"}
+                </span>
+                {!serverStatus?.jellyseerr?.ok && serverStatus?.jellyseerr?.message && (
+                  <span className="status-note">{serverStatus.jellyseerr.message}</span>
+                )}
+              </div>
+              <div className="status-item">
+                <span className="status-label">Sonarr</span>
+                <span className={`status-pill ${serverStatus?.sonarr?.ok ? "ok" : "bad"}`}>
+                  {serverStatus?.sonarr?.ok ? "OK" : "Error"}
+                </span>
+                {!serverStatus?.sonarr?.ok && serverStatus?.sonarr?.message && (
+                  <span className="status-note">{serverStatus.sonarr.message}</span>
+                )}
+              </div>
+              <div className="status-item">
+                <span className="status-label">Radarr</span>
+                <span className={`status-pill ${serverStatus?.radarr?.ok ? "ok" : "bad"}`}>
+                  {serverStatus?.radarr?.ok ? "OK" : "Error"}
+                </span>
+                {!serverStatus?.radarr?.ok && serverStatus?.radarr?.message && (
+                  <span className="status-note">{serverStatus.radarr.message}</span>
+                )}
+              </div>
+            </div>
+            <div className="row">
+              <button className="btn ghost small" type="button" onClick={onRefreshStatus}>
+                Refresh Status
+              </button>
+            </div>
+          </div>
+        )}
         <div className="settings-group">
           <div className="section-title">Emby</div>
           <div className="grid-2">

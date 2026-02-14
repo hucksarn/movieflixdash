@@ -436,6 +436,8 @@ export default function App() {
   const [loginPass, setLoginPass] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
   const [settingsMessage, setSettingsMessage] = useState("");
+  const [serverStatus, setServerStatus] = useState(null);
+  const [serverStatusError, setServerStatusError] = useState("");
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === "undefined") return "dark";
     return localStorage.getItem("movieflix_theme") || "dark";
@@ -448,6 +450,20 @@ export default function App() {
     const base = getSettings();
     return { ...base, accounts: normalizeAccounts(base) };
   });
+  const fetchServerStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/status`, { cache: "no-store" });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "Status check failed.");
+      }
+      const data = await response.json();
+      setServerStatus(data);
+      setServerStatusError("");
+    } catch (err) {
+      setServerStatusError(err?.message || "Status check failed.");
+    }
+  }, []);
   const [syncedUsers, setSyncedUsersState] = useState(() => getSyncedUsers());
   const [plans, setPlans] = useState(() => getPlans());
   const [subscriptions, setSubscriptions] = useState(() => getSubscriptions());
@@ -1693,6 +1709,13 @@ export default function App() {
 
   useEffect(() => {
     if (!session || !isAdmin) return;
+    fetchServerStatus();
+    const interval = setInterval(fetchServerStatus, 30000);
+    return () => clearInterval(interval);
+  }, [session, isAdmin, fetchServerStatus]);
+
+  useEffect(() => {
+    if (!session || !isAdmin) return;
     if (!settings.embyUrl || !settings.apiKey) return;
 
     const now = Date.now();
@@ -2100,6 +2123,9 @@ export default function App() {
                     onDiscard={handleSettingsDiscard}
                     savedSettings={savedSettings}
                     message={settingsMessage}
+                    serverStatus={serverStatus}
+                    serverStatusError={serverStatusError}
+                    onRefreshStatus={fetchServerStatus}
                     onLogout={handleLogout}
                   />
                 ) : (
