@@ -25,7 +25,7 @@ bash run.sh
 
 This will:
 1. Install dependencies if needed
-2. Start the dashboard on `PORT` (default `5173`)
+2. Start the dashboard on `PORT` (default `5002`)
 3. Start the Telegram bot
 
 Logs:
@@ -34,7 +34,7 @@ Logs:
 
 Open:
 ```
-http://<server-ip>:5173/emby/
+http://<server-ip>:5002/
 ```
 
 ## Production Server (Port 5002)
