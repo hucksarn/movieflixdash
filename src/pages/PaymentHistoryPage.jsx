@@ -21,14 +21,14 @@ const getDurationLabel = (daysValue) => {
   return `${days} day${days === 1 ? "" : "s"}`;
 };
 
-const formatAmount = (sub) => {
-  const price = Number(sub?.price || 0);
+const formatFromSub = (sub, amount) => {
   const rawCurrency = sub?.currency || "MVR";
   const currency = rawCurrency === "USD" ? "MVR" : rawCurrency;
-  const amount = Number.isFinite(price)
-    ? price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const value = Number(amount || 0);
+  const formatted = Number.isFinite(value)
+    ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : "0.00";
-  return `${currency} ${amount}`;
+  return `${currency} ${formatted}`;
 };
 
 const formatStatus = (status) => {
@@ -103,7 +103,14 @@ export default function PaymentHistoryPage({ subscriptions = [], currentUser }) 
                       </button>
                     </td>
                     <td className="col-payment-status">{statusLabel}</td>
-                    <td className="col-payment-amount">{formatAmount(sub)}</td>
+                    <td className="col-payment-amount">
+                      {formatFromSub(
+                        sub,
+                        sub?.finalAmount !== undefined && sub?.finalAmount !== null
+                          ? sub.finalAmount
+                          : sub?.price
+                      )}
+                    </td>
                     <td className="col-payment-slip">
                       {slipUrl ? (
                         <button
@@ -125,6 +132,39 @@ export default function PaymentHistoryPage({ subscriptions = [], currentUser }) 
                           <div className="detail-item">
                             <span className="detail-label">Submitted</span>
                             <span className="detail-value">{formatDate(sub.submittedAt)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Plan Price</span>
+                            <span className="detail-value">{formatFromSub(sub, sub?.price)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Amount Paid</span>
+                            <span className="detail-value">
+                              {formatFromSub(
+                                sub,
+                                sub?.finalAmount !== undefined && sub?.finalAmount !== null
+                                  ? sub.finalAmount
+                                  : sub?.price
+                              )}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Discount</span>
+                            <span className="detail-value">
+                              {(() => {
+                                const price = Number(sub?.price || 0);
+                                const actual =
+                                  sub?.finalAmount !== undefined && sub?.finalAmount !== null
+                                    ? Number(sub.finalAmount)
+                                    : price;
+                                const discount =
+                                  typeof sub?.discountAmount === "number"
+                                    ? Number(sub.discountAmount)
+                                    : price - actual;
+                                if (!Number.isFinite(discount) || discount <= 0) return "-";
+                                return formatFromSub(sub, discount);
+                              })()}
+                            </span>
                           </div>
                           <div className="detail-item">
                             <span className="detail-label">Start</span>
