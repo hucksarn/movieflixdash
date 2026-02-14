@@ -11,6 +11,16 @@ const formatDate = (value) => {
 
 const getUserKey = (user) => user?.userId || user?.username || "";
 
+const formatAmount = (amount, currency) => {
+  const value = Number(amount || 0);
+  const rawCurrency = currency || "MVR";
+  const safeCurrency = rawCurrency === "USD" ? "MVR" : rawCurrency;
+  const formatted = Number.isFinite(value)
+    ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : "0.00";
+  return `${safeCurrency} ${formatted}`;
+};
+
 const isUnlimitedUser = (user, unlimitedList = []) => {
   const userId = user?.userId || user?.Id || user?.id || "";
   const username = String(user?.username || user?.Name || "").toLowerCase();
@@ -55,6 +65,38 @@ export default function UserSettingsPage({
   const planLabel = unlimited ? "MovieFlixHD Premium" : activeSub?.planName || "-";
   const startLabel = unlimited ? "Unlimited" : formatDate(activeSub?.startDate);
   const endLabel = unlimited ? "Unlimited" : formatDate(activeSub?.endDate);
+  const planPriceLabel = unlimited
+    ? "-"
+    : activeSub
+      ? formatAmount(activeSub?.price, activeSub?.currency)
+      : "-";
+  const paidAmount = unlimited
+    ? "-"
+    : activeSub
+      ? formatAmount(
+          activeSub?.finalAmount !== undefined && activeSub?.finalAmount !== null
+            ? activeSub.finalAmount
+            : activeSub?.price,
+          activeSub?.currency
+        )
+      : "-";
+  const discountAmount = unlimited
+    ? "-"
+    : activeSub
+      ? (() => {
+          const price = Number(activeSub?.price || 0);
+          const actual =
+            activeSub?.finalAmount !== undefined && activeSub?.finalAmount !== null
+              ? Number(activeSub.finalAmount)
+              : price;
+          const discount =
+            typeof activeSub?.discountAmount === "number"
+              ? Number(activeSub.discountAmount)
+              : price - actual;
+          if (!Number.isFinite(discount) || discount <= 0) return "-";
+          return formatAmount(discount, activeSub?.currency);
+        })()
+      : "-";
 
   return (
     <section className="card settings-page user-settings-page">
@@ -78,6 +120,18 @@ export default function UserSettingsPage({
         <div className="detail-item">
           <span className="detail-label">Plan</span>
           <span className="detail-value">{planLabel}</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Plan Price</span>
+          <span className="detail-value">{planPriceLabel}</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Amount Paid</span>
+          <span className="detail-value">{paidAmount}</span>
+        </div>
+        <div className="detail-item">
+          <span className="detail-label">Discount</span>
+          <span className="detail-value">{discountAmount}</span>
         </div>
         <div className="detail-item">
           <span className="detail-label">Start</span>
