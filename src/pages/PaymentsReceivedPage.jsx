@@ -38,6 +38,12 @@ const formatDiscount = (sub) => {
   return `${currency} ${formatted}`;
 };
 
+const parseAmount = (value) => {
+  if (value === null || value === undefined) return NaN;
+  const cleaned = String(value).replace(/[^0-9.]/g, "");
+  return cleaned ? Number(cleaned) : NaN;
+};
+
 export default function PaymentsReceivedPage({
   subscriptions = [],
   plans = [],
@@ -149,9 +155,9 @@ export default function PaymentsReceivedPage({
       setManualMessage("Select a plan.");
       return;
     }
-    const amount = Number(manualForm.amount);
+    const amount = parseAmount(manualForm.amount);
     if (!Number.isFinite(amount)) {
-      setManualMessage("Enter a valid paid amount.");
+      setManualMessage("Enter a valid paid amount (numbers only).");
       return;
     }
     if (!manualForm.startDate || !manualForm.endDate) {
@@ -186,7 +192,10 @@ export default function PaymentsReceivedPage({
       slipData: manualForm.slipData,
     });
 
-    if (!saved) return;
+    if (!saved) {
+      setManualMessage("Save failed. Please try again.");
+      return;
+    }
     setManualForm({
       username: "",
       planId: "",
@@ -277,7 +286,10 @@ export default function PaymentsReceivedPage({
                         }
                       }
                       if (plan?.price !== undefined && plan?.price !== null) {
-                        nextAmount = String(plan.price);
+                        const parsed = parseAmount(plan.price);
+                        if (Number.isFinite(parsed)) {
+                          nextAmount = String(parsed);
+                        }
                       }
                       return { ...prev, planId: nextPlanId, endDate: nextEnd, amount: nextAmount };
                     })
