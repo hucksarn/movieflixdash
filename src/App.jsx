@@ -1470,6 +1470,40 @@ export default function App() {
     });
   };
 
+  const handleAddManualPayment = (payload) => {
+    if (!isAdmin || !payload) return;
+    const submittedAt = new Date().toISOString();
+    const priceValue = Number(payload.price || 0);
+    const actualPaid = Number(payload.finalAmount || payload.price || 0);
+    const discount = priceValue - actualPaid;
+    const next = [
+      {
+        id: safeUUID(),
+        status: "approved",
+        approvedAt: submittedAt,
+        reviewedAt: submittedAt,
+        submittedAt,
+        playbackDisabledAt: null,
+        ...payload,
+        price: priceValue,
+        finalAmount: actualPaid,
+        discountAmount: discount > 0 ? discount : 0,
+      },
+      ...subscriptions,
+    ];
+    saveSubscriptions(next);
+    setSubscriptions(next);
+    saveServerSubscriptions(next).catch(() => {});
+    if (payload.userId) {
+      setUserPlayback(payload.userId, true).catch(() => {});
+    }
+    pushToast({
+      title: "Payment added",
+      message: "Manual payment record saved.",
+      tone: "success",
+    });
+  };
+
   const handleAddUnlimitedUser = (user) => {
     if (!isAdmin || !user) return;
     const userId = user.Id || user.id || "";
@@ -2374,9 +2408,11 @@ export default function App() {
                 isAdmin ? (
                   <PaymentsReceivedPage
                     subscriptions={subscriptions}
+                    plans={plans}
                     onDeletePayment={handleDeletePayment}
                     onUploadSlip={handleUploadPaymentSlip}
                     onUpdatePaymentAmount={handleUpdatePaymentAmount}
+                    onAddManualPayment={handleAddManualPayment}
                   />
                 ) : (
                   <Navigate to="/dashboard" replace />

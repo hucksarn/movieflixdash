@@ -40,13 +40,26 @@ const formatDiscount = (sub) => {
 
 export default function PaymentsReceivedPage({
   subscriptions = [],
+  plans = [],
   onDeletePayment,
   onUploadSlip,
   onUpdatePaymentAmount,
+  onAddManualPayment,
 }) {
   const [openSlip, setOpenSlip] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [amountDrafts, setAmountDrafts] = useState({});
+  const [manualForm, setManualForm] = useState({
+    username: "",
+    userId: "",
+    planId: "",
+    amount: "",
+    startDate: "",
+    endDate: "",
+    slipName: "",
+    slipData: "",
+  });
+  const [manualMessage, setManualMessage] = useState("");
 
   const approved = useMemo(
     () =>
@@ -89,12 +102,186 @@ export default function PaymentsReceivedPage({
     onUpdatePaymentAmount(sub.id, actualPaid);
   };
 
+  const handleManualSlip = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setManualForm((prev) => ({
+        ...prev,
+        slipName: file.name,
+        slipData: reader.result || "",
+      }));
+      event.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleManualSubmit = (event) => {
+    event.preventDefault();
+    if (!onAddManualPayment) return;
+    setManualMessage("");
+    const username = manualForm.username.trim();
+    if (!username) {
+      setManualMessage("Username is required.");
+      return;
+    }
+    if (!manualForm.planId) {
+      setManualMessage("Select a plan.");
+      return;
+    }
+    const amount = Number(manualForm.amount);
+    if (!Number.isFinite(amount)) {
+      setManualMessage("Enter a valid paid amount.");
+      return;
+    }
+    if (!manualForm.startDate || !manualForm.endDate) {
+      setManualMessage("Start and end dates are required.");
+      return;
+    }
+
+    const plan = plans.find((item) => item.id === manualForm.planId);
+    if (!plan) {
+      setManualMessage("Plan not found.");
+      return;
+    }
+
+    onAddManualPayment({
+      userKey: username.toLowerCase(),
+      userId: manualForm.userId.trim(),
+      username,
+      planId: plan.id,
+      planName: plan.name,
+      durationDays: Number(plan.durationDays || plan.duration || 0),
+      price: plan.price,
+      currency: plan.currency || "MVR",
+      finalAmount: amount,
+      startDate: new Date(manualForm.startDate).toISOString(),
+      endDate: new Date(manualForm.endDate).toISOString(),
+      slipName: manualForm.slipName,
+      slipData: manualForm.slipData,
+    });
+
+    setManualForm({
+      username: "",
+      userId: "",
+      planId: "",
+      amount: "",
+      startDate: "",
+      endDate: "",
+      slipName: "",
+      slipData: "",
+    });
+    setManualMessage("Manual payment saved.");
+  };
+
   return (
     <section className="card payments-received-page">
       <div className="card-header">
         <h2>Payments Received</h2>
         <div className="count">{approved.length} total</div>
       </div>
+
+      {onAddManualPayment && (
+        <div className="form-card">
+          <div className="section-title">Add Manual Payment</div>
+          <form className="stack" onSubmit={handleManualSubmit}>
+            <div className="grid-2">
+              <label>
+                Username
+                <input
+                  type="text"
+                  value={manualForm.username}
+                  onChange={(event) =>
+                    setManualForm((prev) => ({ ...prev, username: event.target.value }))
+                  }
+                  placeholder="User name"
+                />
+              </label>
+              <label>
+                User ID (optional)
+                <input
+                  type="text"
+                  value={manualForm.userId}
+                  onChange={(event) =>
+                    setManualForm((prev) => ({ ...prev, userId: event.target.value }))
+                  }
+                  placeholder="Emby user id"
+                />
+              </label>
+              <label>
+                Plan
+                <select
+                  className="select"
+                  value={manualForm.planId}
+                  onChange={(event) =>
+                    setManualForm((prev) => ({ ...prev, planId: event.target.value }))
+                  }
+                >
+                  <option value="">Select plan</option>
+                  {plans.map((plan) => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name} ({plan.durationDays || plan.duration || 0} days)
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Amount Paid
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={manualForm.amount}
+                  onChange={(event) =>
+                    setManualForm((prev) => ({ ...prev, amount: event.target.value }))
+                  }
+                  placeholder="0.00"
+                />
+              </label>
+              <label>
+                Start Date
+                <input
+                  type="date"
+                  value={manualForm.startDate}
+                  onChange={(event) =>
+                    setManualForm((prev) => ({ ...prev, startDate: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                End Date
+                <input
+                  type="date"
+                  value={manualForm.endDate}
+                  onChange={(event) =>
+                    setManualForm((prev) => ({ ...prev, endDate: event.target.value }))
+                  }
+                />
+              </label>
+            </div>
+            <div className="row">
+              <label className="btn ghost small">
+                {manualForm.slipName ? "Replace Slip" : "Upload Slip"}
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="file-input"
+                  onChange={handleManualSlip}
+                  hidden
+                />
+              </label>
+              {manualForm.slipName && <span className="muted">{manualForm.slipName}</span>}
+            </div>
+            {manualMessage && <div className="note">{manualMessage}</div>}
+            <div className="row">
+              <button className="btn small" type="submit">
+                Save Manual Payment
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
       <div className="table-wrap payments-received-table">
         <div className="table-scroll">
           <table className="table">
