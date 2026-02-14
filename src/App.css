@@ -1196,7 +1196,7 @@ input:focus {
 
 .users-page input[type="date"] {
   padding: 4px 6px;
-  font-size: 10px;
+  font-size: 10px !important;
   height: 24px;
 }
 
@@ -2578,7 +2578,7 @@ input:focus {
 
 .role-admin .users-page input[type="date"] {
   padding: 3px 5px;
-  font-size: 9px;
+  font-size: 9px !important;
   height: 22px;
 }
 
