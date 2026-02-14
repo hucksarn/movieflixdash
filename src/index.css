@@ -31,6 +31,10 @@
   --transition-slow: 0.28s ease;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 .theme-light {
   color-scheme: light;
   background-color: #f5f7fb;
@@ -87,9 +91,8 @@ input {
 @media (max-width: 900px) {
   input,
   select,
-  textarea,
-  button {
-    font-size: 16px;
+  textarea {
+    font-size: 16px !important;
   }
 }
 
