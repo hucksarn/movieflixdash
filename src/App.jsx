@@ -1470,6 +1470,27 @@ export default function App() {
     });
   };
 
+  const handleUpdatePaymentDate = (subId, nextIso) => {
+    if (!isAdmin || !subId || !nextIso) return;
+    const next = subscriptions.map((sub) => {
+      if (sub.id !== subId) return sub;
+      return {
+        ...sub,
+        submittedAt: nextIso,
+        approvedAt: sub.approvedAt || nextIso,
+        reviewedAt: sub.reviewedAt || nextIso,
+      };
+    });
+    saveSubscriptions(next);
+    setSubscriptions(next);
+    saveServerSubscriptions(next).catch(() => {});
+    pushToast({
+      title: "Date updated",
+      message: "Payment date saved.",
+      tone: "success",
+    });
+  };
+
   const handleAddManualPayment = (payload) => {
     if (!isAdmin || !payload) return;
     const submittedAt = new Date().toISOString();
@@ -2413,6 +2434,7 @@ export default function App() {
                     onDeletePayment={handleDeletePayment}
                     onUploadSlip={handleUploadPaymentSlip}
                     onUpdatePaymentAmount={handleUpdatePaymentAmount}
+                    onUpdatePaymentDate={handleUpdatePaymentDate}
                     onAddManualPayment={handleAddManualPayment}
                   />
                 ) : (

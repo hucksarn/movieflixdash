@@ -45,6 +45,7 @@ export default function PaymentsReceivedPage({
   onDeletePayment,
   onUploadSlip,
   onUpdatePaymentAmount,
+  onUpdatePaymentDate,
   onAddManualPayment,
 }) {
   const [openSlip, setOpenSlip] = useState(null);
@@ -53,6 +54,8 @@ export default function PaymentsReceivedPage({
   const [showManualModal, setShowManualModal] = useState(false);
   const [editingAmountId, setEditingAmountId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [editingDateId, setEditingDateId] = useState(null);
+  const [dateDrafts, setDateDrafts] = useState({});
   const [manualForm, setManualForm] = useState({
     username: "",
     planId: "",
@@ -104,6 +107,15 @@ export default function PaymentsReceivedPage({
     if (actualPaid === null || !Number.isFinite(actualPaid)) return;
     onUpdatePaymentAmount(sub.id, actualPaid);
     setEditingAmountId(null);
+  };
+
+  const commitPaymentDate = (sub) => {
+    if (!onUpdatePaymentDate) return;
+    const nextDate = dateDrafts[sub.id];
+    if (!nextDate) return;
+    const nextIso = new Date(`${nextDate}T00:00:00`).toISOString();
+    onUpdatePaymentDate(sub.id, nextIso);
+    setEditingDateId(null);
   };
 
   const handleManualSlip = (event) => {
@@ -376,6 +388,16 @@ export default function PaymentsReceivedPage({
                 sub.id || `${sub.submittedAt || "no-date"}-${sub.planId || sub.planName || ""}`;
               const isExpanded = expandedId === rowId;
               const slipUrl = sub.slipData || sub.slipUrl || "";
+              const dateValue = formatDate(sub.reviewedAt || sub.approvedAt || sub.submittedAt);
+              const dateInput =
+                dateDrafts[sub.id] ??
+                (() => {
+                  const raw = sub.reviewedAt || sub.approvedAt || sub.submittedAt;
+                  if (!raw) return "";
+                  const d = new Date(raw);
+                  if (Number.isNaN(d.getTime())) return "";
+                  return d.toISOString().slice(0, 10);
+                })();
               const currentAmount =
                 amountDrafts[sub.id] ??
                 (sub.finalAmount !== undefined && sub.finalAmount !== null
@@ -385,7 +407,31 @@ export default function PaymentsReceivedPage({
                 <Fragment key={rowId}>
                   <tr>
                     <td className="col-received-date" data-label="Date">
-                      {formatDate(sub.reviewedAt || sub.approvedAt || sub.submittedAt)}
+                      {editingDateId === sub.id && onUpdatePaymentDate ? (
+                        <input
+                          type="date"
+                          value={dateInput}
+                          onChange={(event) =>
+                            setDateDrafts((prev) => ({
+                              ...prev,
+                              [sub.id]: event.target.value,
+                            }))
+                          }
+                          onBlur={() => commitPaymentDate(sub)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitPaymentDate(sub);
+                            }
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              setEditingDateId(null);
+                            }
+                          }}
+                        />
+                      ) : (
+                        dateValue
+                      )}
                     </td>
                     <td className="col-received-user" data-label="User">
                       {sub.username || sub.userId || "-"}
@@ -446,6 +492,10 @@ export default function PaymentsReceivedPage({
                             </span>
                           </div>
                           <div className="detail-item">
+                            <span className="detail-label">Payment Date</span>
+                            <span className="detail-value">{dateValue}</span>
+                          </div>
+                          <div className="detail-item">
                             <span className="detail-label">Amount Paid</span>
                             <span className="detail-value">
                               {editingAmountId === sub.id && onUpdatePaymentAmount ? (
@@ -500,6 +550,21 @@ export default function PaymentsReceivedPage({
                           <div className="detail-item">
                             <span className="detail-label">Actions</span>
                             <span className="detail-value">
+                              {onUpdatePaymentDate && (
+                                <button
+                                  type="button"
+                                  className="btn ghost tiny"
+                                  onClick={() => {
+                                    setEditingDateId(sub.id);
+                                    setDateDrafts((prev) => ({
+                                      ...prev,
+                                      [sub.id]: dateInput,
+                                    }));
+                                  }}
+                                >
+                                  Edit Date
+                                </button>
+                              )}
                               {onUploadSlip && (
                                 <label className="btn ghost tiny">
                                   {slipUrl ? "Replace Slip" : "Upload Slip"}
