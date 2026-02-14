@@ -543,7 +543,7 @@ export default function UsersPage({
 
   const handleAddTag = (key, tags) => {
     if (!onUpdateUserTags || !key) return;
-    const value = String(newTagByKey[key] || "").trim();
+    const value = String(newTagByKey[key] || "").trim().toLowerCase();
     if (!value) return;
     onUpdateUserTags(key, [...tags, value]);
     setNewTagByKey((prev) => ({ ...prev, [key]: "" }));
@@ -558,7 +558,7 @@ export default function UsersPage({
 
   const commitEditTag = (key, tags, index, value) => {
     if (!onUpdateUserTags || !key) return;
-    const nextValue = String(value || "").trim();
+    const nextValue = String(value || "").trim().toLowerCase();
     const next = [...tags];
     if (!nextValue) {
       next.splice(index, 1);
@@ -861,7 +861,7 @@ export default function UsersPage({
                             {tags.map((tag, index) => {
                               const isEditing =
                                 editingTag?.key === tagKey && editingTag?.index === index;
-                              if (isEditing) {
+                              if (isEditing && isAdmin) {
                                 return (
                                   <span className="tag-edit" key={`${tagKey}-edit-${index}`}>
                                     <input
@@ -893,28 +893,34 @@ export default function UsersPage({
                               }
                               return (
                                 <span className="tag-chip" key={`${tagKey}-${index}`}>
-                                  <button
-                                    type="button"
-                                    className="tag-label"
-                                    onClick={() =>
-                                      setEditingTag({ key: tagKey, index, value: tag })
-                                    }
-                                  >
-                                    {tag}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="tag-remove"
-                                    onClick={() => handleRemoveTag(tagKey, tags, index)}
-                                    aria-label={`Remove tag ${tag}`}
-                                  >
-                                    ×
-                                  </button>
+                                  {isAdmin ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="tag-label"
+                                        onClick={() =>
+                                          setEditingTag({ key: tagKey, index, value: tag })
+                                        }
+                                      >
+                                        {tag}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="tag-remove"
+                                        onClick={() => handleRemoveTag(tagKey, tags, index)}
+                                        aria-label={`Remove tag ${tag}`}
+                                      >
+                                        ×
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span className="tag-label">{tag}</span>
+                                  )}
                                 </span>
                               );
                             })}
                             <span className="tag-add">
-                              {activeTagKey === tagKey ? (
+                              {isAdmin && activeTagKey === tagKey ? (
                                 <>
                                   <input
                                     type="text"
@@ -947,7 +953,7 @@ export default function UsersPage({
                                     +
                                   </button>
                                 </>
-                              ) : (
+                              ) : isAdmin ? (
                                 <button
                                   type="button"
                                   className="btn ghost tiny"
@@ -955,7 +961,7 @@ export default function UsersPage({
                                 >
                                   +
                                 </button>
-                              )}
+                              ) : null}
                             </span>
                           </div>
                         </span>

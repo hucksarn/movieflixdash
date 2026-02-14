@@ -1435,7 +1435,7 @@ export default function App() {
     const normalized = Array.from(
       new Set(
         (tags || [])
-          .map((tag) => String(tag || "").trim())
+          .map((tag) => String(tag || "").trim().toLowerCase())
           .filter(Boolean)
       )
     );
