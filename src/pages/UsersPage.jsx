@@ -810,7 +810,7 @@ export default function UsersPage({
                                 value={draftStart}
                                 onChange={(event) => {
                                   const nextStart = event.target.value;
-                                  const nextEnd = addDaysToInput(nextStart, 7) || draftEnd || "";
+                                  const nextEnd = addDaysToInput(nextStart, 30) || draftEnd || "";
                                   setDateDrafts((prev) => ({
                                     ...prev,
                                     [userId]: { ...(prev[userId] || {}), startDate: nextStart, endDate: nextEnd },
