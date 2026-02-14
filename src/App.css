@@ -2890,15 +2890,25 @@ input:focus {
 }
 
 .dashboard-page .col-dash-user {
-  width: 40%;
+  width: 32%;
 }
 
 .dashboard-page .col-dash-plan {
-  width: 35%;
+  width: 28%;
 }
 
 .dashboard-page .col-dash-date {
-  width: 25%;
+  width: 20%;
+}
+
+.dashboard-page .col-dash-amount {
+  width: 20%;
+}
+
+.dashboard-page .table th,
+.dashboard-page .table td {
+  padding: 6px 6px;
+  font-size: 11px;
 }
 
 .mini-actions {

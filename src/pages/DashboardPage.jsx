@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const TIME_ZONE = "Asia/Karachi";
@@ -47,6 +47,14 @@ const sumByCurrency = (subs) => {
     totals[currency] = (totals[currency] || 0) + value;
   });
   return totals;
+};
+
+const formatMonthLabel = (value) => {
+  if (!value) return "";
+  const [year, month] = value.split("-").map(Number);
+  if (!year || !month) return value;
+  const date = new Date(Date.UTC(year, month - 1, 1));
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(date);
 };
 
 export default function DashboardPage({ users = [], subscriptions = [] }) {
@@ -108,6 +116,11 @@ export default function DashboardPage({ users = [], subscriptions = [] }) {
     return Array.from(set).sort().reverse();
   }, [paymentsReceived]);
   const [selectedMonth, setSelectedMonth] = useState(() => monthOptions[0] || "");
+  useEffect(() => {
+    if (!selectedMonth && monthOptions.length > 0) {
+      setSelectedMonth(monthOptions[0]);
+    }
+  }, [monthOptions, selectedMonth]);
   const monthPayments = useMemo(() => {
     if (!selectedMonth) return [];
     return paymentsReceived.filter((sub) => {
@@ -194,7 +207,7 @@ export default function DashboardPage({ users = [], subscriptions = [] }) {
               <option value="">Select month</option>
               {monthOptions.map((month) => (
                 <option key={month} value={month}>
-                  {month}
+                  {formatMonthLabel(month)}
                 </option>
               ))}
             </select>
@@ -219,25 +232,26 @@ export default function DashboardPage({ users = [], subscriptions = [] }) {
         <div className="table-wrap">
           <table className="table">
             <colgroup>
+              <col className="col-dash-date" />
               <col className="col-dash-user" />
               <col className="col-dash-plan" />
-              <col className="col-dash-date" />
+              <col className="col-dash-amount" />
             </colgroup>
             <thead>
               <tr>
+                <th>Date</th>
                 <th>User</th>
                 <th>Plan</th>
                 <th>Amount</th>
-                <th>Date</th>
               </tr>
             </thead>
             <tbody>
               {monthPayments.map((sub) => (
                 <tr key={sub.id || sub.submittedAt}>
+                  <td>{formatDate(sub.approvedAt || sub.reviewedAt || sub.submittedAt)}</td>
                   <td>{sub.username || "Unknown"}</td>
                   <td>{sub.planName || "-"}</td>
                   <td>{formatMoney(sub.finalAmount ?? sub.price, sub.currency)}</td>
-                  <td>{formatDate(sub.approvedAt || sub.reviewedAt || sub.submittedAt)}</td>
                 </tr>
               ))}
               {monthPayments.length === 0 && (
