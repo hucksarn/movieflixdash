@@ -464,6 +464,24 @@ export default function App() {
       setServerStatusError(err?.message || "Status check failed.");
     }
   }, []);
+
+  const startCloudflareTunnel = useCallback(async () => {
+    const response = await fetch(`${API_BASE}/api/tunnel/start`, { method: "POST" });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || "Failed to start tunnel.");
+    }
+    await fetchServerStatus();
+  }, [fetchServerStatus]);
+
+  const stopCloudflareTunnel = useCallback(async () => {
+    const response = await fetch(`${API_BASE}/api/tunnel/stop`, { method: "POST" });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || "Failed to stop tunnel.");
+    }
+    await fetchServerStatus();
+  }, [fetchServerStatus]);
   const [syncedUsers, setSyncedUsersState] = useState(() => getSyncedUsers());
   const [plans, setPlans] = useState(() => getPlans());
   const [subscriptions, setSubscriptions] = useState(() => getSubscriptions());
@@ -2126,6 +2144,8 @@ export default function App() {
                     serverStatus={serverStatus}
                     serverStatusError={serverStatusError}
                     onRefreshStatus={fetchServerStatus}
+                    onStartTunnel={startCloudflareTunnel}
+                    onStopTunnel={stopCloudflareTunnel}
                     onLogout={handleLogout}
                   />
                 ) : (

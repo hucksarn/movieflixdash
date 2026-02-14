@@ -12,6 +12,8 @@ export default function SettingsPage({
   serverStatus,
   serverStatusError,
   onRefreshStatus,
+  onStartTunnel,
+  onStopTunnel,
   onLogout,
 }) {
   const [copyNotice, setCopyNotice] = useState("");
@@ -215,6 +217,12 @@ export default function SettingsPage({
                 </span>
               </div>
               <div className="status-item">
+                <span className="status-label">Cloudflare Tunnel</span>
+                <span className={`status-pill ${serverStatus?.tunnel?.running ? "ok" : "bad"}`}>
+                  {serverStatus?.tunnel?.running ? "Running" : "Stopped"}
+                </span>
+              </div>
+              <div className="status-item">
                 <span className="status-label">Emby</span>
                 <span className={`status-pill ${serverStatus?.emby?.ok ? "ok" : "bad"}`}>
                   {serverStatus?.emby?.ok ? "OK" : "Error"}
@@ -254,6 +262,22 @@ export default function SettingsPage({
             <div className="row">
               <button className="btn ghost small" type="button" onClick={onRefreshStatus}>
                 Refresh Status
+              </button>
+              <button
+                className="btn small"
+                type="button"
+                onClick={onStartTunnel}
+                disabled={!onStartTunnel}
+              >
+                Start Tunnel
+              </button>
+              <button
+                className="btn ghost small"
+                type="button"
+                onClick={onStopTunnel}
+                disabled={!onStopTunnel}
+              >
+                Stop Tunnel
               </button>
             </div>
           </div>

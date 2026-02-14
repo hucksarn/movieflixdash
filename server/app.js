@@ -1,7 +1,9 @@
 import fs from "fs";
 import http from "http";
 import path from "path";
+import os from "os";
 import { fileURLToPath } from "url";
+import { spawn } from "child_process";
 import fetch from "node-fetch";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +21,12 @@ const unlimitedFile = path.resolve(ROOT, "unlimited-users.json");
 const tagsFile = path.resolve(ROOT, "user-tags.json");
 const telegramPidFile = path.resolve(ROOT, ".pids", "telegram-bot.pid");
 const telegramLockFile = path.resolve(ROOT, "telegram-bot.lock");
+const cloudflaredPidFile = path.resolve(ROOT, ".pids", "cloudflared.pid");
+const cloudflaredLockFile = path.resolve(ROOT, "cloudflared.lock");
+const cloudflaredLogFile = path.resolve("/tmp", "cloudflared.log");
+const cloudflaredBin =
+  process.env.CLOUDFLARED_BIN || path.resolve(os.homedir(), "bin", "cloudflared");
+const cloudflaredTunnelName = process.env.CLOUDFLARED_TUNNEL || "movieflix";
 
 const clientErrorsLog = path.resolve(ROOT, "client-errors.log");
 const embyProxyLog = path.resolve(ROOT, "emby-proxy.log");
@@ -116,6 +124,12 @@ const isProcessRunning = (pid) => {
   }
 };
 
+const ensurePidDir = () => {
+  const dir = path.resolve(ROOT, ".pids");
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+};
+
 const isTelegramBotRunning = () => {
   if (fs.existsSync(telegramPidFile)) {
     try {
@@ -132,6 +146,27 @@ const isTelegramBotRunning = () => {
       return ageMs < 10 * 60 * 1000;
     } catch {
       // ignore stat errors
+    }
+  }
+  return false;
+};
+
+const isCloudflaredRunning = () => {
+  if (fs.existsSync(cloudflaredPidFile)) {
+    try {
+      const pid = Number(fs.readFileSync(cloudflaredPidFile, "utf-8").trim());
+      if (isProcessRunning(pid)) return true;
+    } catch {
+      // ignore
+    }
+  }
+  if (fs.existsSync(cloudflaredLockFile)) {
+    try {
+      const stat = fs.statSync(cloudflaredLockFile);
+      const ageMs = Date.now() - stat.mtimeMs;
+      return ageMs < 10 * 60 * 1000;
+    } catch {
+      // ignore
     }
   }
   return false;
@@ -566,6 +601,7 @@ const handleStatus = async (req, res) => {
   const settings = loadSettings();
   const status = {
     telegramBot: { running: isTelegramBotRunning() },
+    tunnel: { running: isCloudflaredRunning() },
     emby: { ok: false, message: "Emby URL not set." },
     jellyseerr: { ok: false, message: "Jellyseerr URL not set." },
     sonarr: { ok: false, message: "Sonarr URL not set." },
@@ -612,6 +648,67 @@ const handleStatus = async (req, res) => {
 
   sendJson(res, status);
   return true;
+};
+
+const handleTunnel = async (req, res) => {
+  if (req.method === "GET") {
+    sendJson(res, { running: isCloudflaredRunning() });
+    return true;
+  }
+
+  if (req.method === "POST") {
+    const action = String(req.url || "").includes("stop") ? "stop" : "start";
+    if (action === "stop") {
+      let stopped = false;
+      if (fs.existsSync(cloudflaredPidFile)) {
+        try {
+          const pid = Number(fs.readFileSync(cloudflaredPidFile, "utf-8").trim());
+          if (isProcessRunning(pid)) {
+            process.kill(pid);
+            stopped = true;
+          }
+        } catch {
+          // ignore stop errors
+        }
+      }
+      try {
+        if (fs.existsSync(cloudflaredPidFile)) fs.unlinkSync(cloudflaredPidFile);
+        if (fs.existsSync(cloudflaredLockFile)) fs.unlinkSync(cloudflaredLockFile);
+      } catch {
+        // ignore cleanup errors
+      }
+      sendJson(res, { ok: true, running: isCloudflaredRunning(), stopped });
+      return true;
+    }
+
+    if (isCloudflaredRunning()) {
+      sendJson(res, { ok: true, running: true, alreadyRunning: true });
+      return true;
+    }
+
+    try {
+      ensurePidDir();
+      const out = fs.openSync(cloudflaredLogFile, "a");
+      const err = fs.openSync(cloudflaredLogFile, "a");
+      const child = spawn(
+        cloudflaredBin,
+        ["tunnel", "run", cloudflaredTunnelName],
+        {
+          detached: true,
+          stdio: ["ignore", out, err],
+        }
+      );
+      fs.writeFileSync(cloudflaredPidFile, String(child.pid));
+      fs.writeFileSync(cloudflaredLockFile, new Date().toISOString());
+      child.unref();
+      sendJson(res, { ok: true, running: true, pid: child.pid });
+      return true;
+    } catch (err) {
+      sendJson(res, { ok: false, running: false, error: err?.message || "start_failed" });
+      return true;
+    }
+  }
+  return false;
 };
 
 const handleMediaRequests = async (req, res, urlParts) => {
@@ -1342,6 +1439,7 @@ const router = async (req, res) => {
   if (pathname.startsWith("/api/unlimited-users")) return await handleUnlimitedUsers(req, res);
   if (pathname.startsWith("/api/user-tags")) return await handleUserTags(req, res);
   if (pathname.startsWith("/api/client-errors")) return await handleClientErrors(req, res);
+  if (pathname.startsWith("/api/tunnel")) return await handleTunnel(req, res);
   if (pathname.startsWith("/api/status")) return await handleStatus(req, res);
   if (pathname.startsWith("/api/emby")) return await handleEmbyProxy(req, res);
   if (pathname.startsWith("/api/jellyseerr")) return await handleJellyseerrProxy(req, res);
