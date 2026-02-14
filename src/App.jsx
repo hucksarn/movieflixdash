@@ -2100,7 +2100,11 @@ export default function App() {
                     onLogout={handleLogout}
                   />
                 ) : (
-                  <UserSettingsPage currentUser={session} subscriptions={subscriptions} />
+                  <UserSettingsPage
+                    currentUser={session}
+                    subscriptions={subscriptions}
+                    unlimitedUsers={unlimitedUsers}
+                  />
                 )
               }
             />

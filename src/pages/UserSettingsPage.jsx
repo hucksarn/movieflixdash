@@ -11,6 +11,17 @@ const formatDate = (value) => {
 
 const getUserKey = (user) => user?.userId || user?.username || "";
 
+const isUnlimitedUser = (user, unlimitedList = []) => {
+  const userId = user?.userId || user?.Id || user?.id || "";
+  const username = String(user?.username || user?.Name || "").toLowerCase();
+  return (unlimitedList || []).some(
+    (item) =>
+      item?.key === userId ||
+      (item?.userId && item.userId === userId) ||
+      (item?.username || "").toLowerCase() === username
+  );
+};
+
 const getActiveSubscription = (subscriptions, userKey) => {
   if (!userKey) return null;
   const now = Date.now();
@@ -26,13 +37,24 @@ const getActiveSubscription = (subscriptions, userKey) => {
   );
 };
 
-export default function UserSettingsPage({ currentUser, subscriptions = [] }) {
+export default function UserSettingsPage({
+  currentUser,
+  subscriptions = [],
+  unlimitedUsers = [],
+}) {
   const userKey = getUserKey(currentUser);
+  const unlimited = useMemo(
+    () => isUnlimitedUser(currentUser, unlimitedUsers),
+    [currentUser, unlimitedUsers]
+  );
   const activeSub = useMemo(
     () => getActiveSubscription(subscriptions, userKey),
     [subscriptions, userKey]
   );
-  const statusLabel = activeSub ? "Active" : "Not subscribed";
+  const statusLabel = unlimited ? "Unlimited" : activeSub ? "Active" : "Not subscribed";
+  const planLabel = unlimited ? "MovieFlixHD Premium" : activeSub?.planName || "-";
+  const startLabel = unlimited ? "Unlimited" : formatDate(activeSub?.startDate);
+  const endLabel = unlimited ? "Unlimited" : formatDate(activeSub?.endDate);
 
   return (
     <section className="card settings-page user-settings-page">
@@ -55,15 +77,15 @@ export default function UserSettingsPage({ currentUser, subscriptions = [] }) {
         </div>
         <div className="detail-item">
           <span className="detail-label">Plan</span>
-          <span className="detail-value">{activeSub?.planName || "-"}</span>
+          <span className="detail-value">{planLabel}</span>
         </div>
         <div className="detail-item">
           <span className="detail-label">Start</span>
-          <span className="detail-value">{formatDate(activeSub?.startDate)}</span>
+          <span className="detail-value">{startLabel}</span>
         </div>
         <div className="detail-item">
           <span className="detail-label">End</span>
-          <span className="detail-value">{formatDate(activeSub?.endDate)}</span>
+          <span className="detail-value">{endLabel}</span>
         </div>
       </div>
     </section>
