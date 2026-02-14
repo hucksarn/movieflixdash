@@ -41,6 +41,7 @@ const formatDiscount = (sub) => {
 export default function PaymentsReceivedPage({
   subscriptions = [],
   plans = [],
+  users = [],
   onDeletePayment,
   onUploadSlip,
   onUpdatePaymentAmount,
@@ -51,7 +52,6 @@ export default function PaymentsReceivedPage({
   const [amountDrafts, setAmountDrafts] = useState({});
   const [manualForm, setManualForm] = useState({
     username: "",
-    userId: "",
     planId: "",
     amount: "",
     startDate: "",
@@ -146,9 +146,14 @@ export default function PaymentsReceivedPage({
       return;
     }
 
+    const matchedUser = users.find(
+      (user) =>
+        String(user?.Name || user?.name || "").toLowerCase() === username.toLowerCase()
+    );
+
     onAddManualPayment({
       userKey: username.toLowerCase(),
-      userId: manualForm.userId.trim(),
+      userId: matchedUser?.Id || matchedUser?.id || "",
       username,
       planId: plan.id,
       planName: plan.name,
@@ -164,7 +169,6 @@ export default function PaymentsReceivedPage({
 
     setManualForm({
       username: "",
-      userId: "",
       planId: "",
       amount: "",
       startDate: "",
@@ -196,19 +200,16 @@ export default function PaymentsReceivedPage({
                     setManualForm((prev) => ({ ...prev, username: event.target.value }))
                   }
                   placeholder="User name"
+                  list="manual-payment-users"
                 />
               </label>
-              <label>
-                User ID (optional)
-                <input
-                  type="text"
-                  value={manualForm.userId}
-                  onChange={(event) =>
-                    setManualForm((prev) => ({ ...prev, userId: event.target.value }))
-                  }
-                  placeholder="Emby user id"
-                />
-              </label>
+              <datalist id="manual-payment-users">
+                {users.map((user) => {
+                  const name = user?.Name || user?.name || "";
+                  if (!name) return null;
+                  return <option key={user.Id || user.id || name} value={name} />;
+                })}
+              </datalist>
               <label>
                 Plan
                 <select

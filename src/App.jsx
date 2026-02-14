@@ -2409,6 +2409,7 @@ export default function App() {
                   <PaymentsReceivedPage
                     subscriptions={subscriptions}
                     plans={plans}
+                    users={syncedUsers}
                     onDeletePayment={handleDeletePayment}
                     onUploadSlip={handleUploadPaymentSlip}
                     onUpdatePaymentAmount={handleUpdatePaymentAmount}
