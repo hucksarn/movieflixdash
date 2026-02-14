@@ -346,8 +346,7 @@ export default function PaymentsReceivedPage({
         </div>
       )}
       <div className="table-wrap payments-received-table">
-        <div className="table-scroll">
-          <table className="table">
+        <table className="table">
           <colgroup>
             <col className="col-received-date" />
             <col className="col-received-user" />
@@ -497,8 +496,7 @@ export default function PaymentsReceivedPage({
               </tr>
             )}
           </tbody>
-          </table>
-        </div>
+        </table>
       </div>
 
       {deleteTarget && (
