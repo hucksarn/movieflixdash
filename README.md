@@ -24,10 +24,12 @@ http://<server-ip>:5173/emby/
 
 ## Production Server (Port 5002)
 
-Start the production server in the background:
+Start / restart the production server in the background:
 
 ```bash
 cd ~/movieflixdash
+git pull
+pkill -f "/home/alee20300/movieflixdash/server/app.js"
 nohup env PORT=5002 node /home/alee20300/movieflixdash/server/app.js > /tmp/movieflix-app.log 2>&1 </dev/null &
 disown
 ```
