@@ -3508,6 +3508,15 @@ input:focus {
     overflow-x: hidden;
   }
 
+  .payments-received-page .table-wrap,
+  .payments-received-page .table,
+  .payments-received-page .table tbody,
+  .payments-received-page .table tr,
+  .payments-received-page .table td {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   .payments-received-page .table tr {
     margin-bottom: 10px;
     border: 1px solid var(--border);
