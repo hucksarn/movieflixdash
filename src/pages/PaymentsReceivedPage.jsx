@@ -19,7 +19,11 @@ const formatAmount = (sub) => {
   return `${currency} ${formatted}`;
 };
 
-export default function PaymentsReceivedPage({ subscriptions = [], onDeletePayment }) {
+export default function PaymentsReceivedPage({
+  subscriptions = [],
+  onDeletePayment,
+  onUploadSlip,
+}) {
   const [openSlip, setOpenSlip] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
@@ -37,6 +41,20 @@ export default function PaymentsReceivedPage({ subscriptions = [], onDeletePayme
         ),
     [subscriptions]
   );
+
+  const handleSlipUpload = (sub, event) => {
+    const file = event.target.files?.[0];
+    if (!file || !onUploadSlip) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      onUploadSlip(sub.id, {
+        slipName: file.name,
+        slipData: reader.result || "",
+      });
+      event.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <section className="card payments-received-page">
@@ -92,15 +110,46 @@ export default function PaymentsReceivedPage({ subscriptions = [], onDeletePayme
                     </td>
                     <td className="col-received-slip" data-label="Slip">
                       {slipUrl ? (
-                        <button
-                          type="button"
-                          className="btn ghost tiny"
-                          onClick={() => setOpenSlip({ url: slipUrl, name: sub.slipName })}
-                        >
-                          View
-                        </button>
+                        <div className="row">
+                          <button
+                            type="button"
+                            className="btn ghost tiny"
+                            onClick={() => setOpenSlip({ url: slipUrl, name: sub.slipName })}
+                          >
+                            View
+                          </button>
+                          {onUploadSlip && (
+                            <>
+                              <label className="btn ghost tiny">
+                                Replace
+                                <input
+                                  type="file"
+                                  accept="image/*,application/pdf"
+                                  className="file-input"
+                                  onChange={(event) => handleSlipUpload(sub, event)}
+                                  hidden
+                                />
+                              </label>
+                            </>
+                          )}
+                        </div>
                       ) : (
-                        <span className="muted">-</span>
+                        <>
+                          {onUploadSlip ? (
+                            <label className="btn ghost tiny">
+                              Upload
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                className="file-input"
+                                onChange={(event) => handleSlipUpload(sub, event)}
+                                hidden
+                              />
+                            </label>
+                          ) : (
+                            <span className="muted">-</span>
+                          )}
+                        </>
                       )}
                     </td>
                     <td className="col-received-actions" data-label="Actions">

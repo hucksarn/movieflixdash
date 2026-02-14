@@ -1419,6 +1419,27 @@ export default function App() {
     });
   };
 
+  const handleUploadPaymentSlip = (subId, payload) => {
+    if (!isAdmin || !subId || !payload?.slipData) return;
+    const next = subscriptions.map((sub) =>
+      sub.id === subId
+        ? {
+            ...sub,
+            slipName: payload.slipName || sub.slipName || "",
+            slipData: payload.slipData,
+          }
+        : sub
+    );
+    saveSubscriptions(next);
+    setSubscriptions(next);
+    saveServerSubscriptions(next).catch(() => {});
+    pushToast({
+      title: "Slip uploaded",
+      message: "Payment slip saved.",
+      tone: "success",
+    });
+  };
+
   const handleAddUnlimitedUser = (user) => {
     if (!isAdmin || !user) return;
     const userId = user.Id || user.id || "";
@@ -2324,6 +2345,7 @@ export default function App() {
                   <PaymentsReceivedPage
                     subscriptions={subscriptions}
                     onDeletePayment={handleDeletePayment}
+                    onUploadSlip={handleUploadPaymentSlip}
                   />
                 ) : (
                   <Navigate to="/dashboard" replace />
