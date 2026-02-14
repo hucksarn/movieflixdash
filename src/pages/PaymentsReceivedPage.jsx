@@ -170,7 +170,7 @@ export default function PaymentsReceivedPage({
         String(user?.Name || user?.name || "").toLowerCase() === username.toLowerCase()
     );
 
-    onAddManualPayment({
+    const saved = onAddManualPayment({
       userKey: username.toLowerCase(),
       userId: matchedUser?.Id || matchedUser?.id || "",
       username,
@@ -186,6 +186,7 @@ export default function PaymentsReceivedPage({
       slipData: manualForm.slipData,
     });
 
+    if (!saved) return;
     setManualForm({
       username: "",
       planId: "",

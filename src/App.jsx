@@ -1519,10 +1519,11 @@ export default function App() {
       setUserPlayback(payload.userId, true).catch(() => {});
     }
     pushToast({
-      title: "Payment added",
-      message: "Manual payment record saved.",
+      title: "Payment submitted",
+      message: "Manual payment saved successfully.",
       tone: "success",
     });
+    return true;
   };
 
   const handleAddUnlimitedUser = (user) => {
