@@ -52,6 +52,7 @@ export default function PaymentsReceivedPage({
   const [amountDrafts, setAmountDrafts] = useState({});
   const [showManualModal, setShowManualModal] = useState(false);
   const [editingAmountId, setEditingAmountId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
   const [manualForm, setManualForm] = useState({
     username: "",
     planId: "",
@@ -347,157 +348,212 @@ export default function PaymentsReceivedPage({
           </div>
         </div>
       )}
-      <div className="payments-received-list">
-        {approved.map((sub) => {
-          const rowId =
-            sub.id || `${sub.submittedAt || "no-date"}-${sub.planId || sub.planName || ""}`;
-          const slipUrl = sub.slipData || sub.slipUrl || "";
-          const currentAmount =
-            amountDrafts[sub.id] ??
-            (sub.finalAmount !== undefined && sub.finalAmount !== null
-              ? String(sub.finalAmount)
-              : String(sub.price || ""));
-          const amountLabel = formatAmount(sub);
-          return (
-            <div className="payment-card" key={rowId}>
-              <div className="payment-row">
-                <span className="payment-label">Date</span>
-                <span className="payment-value">
-                  {formatDate(sub.reviewedAt || sub.approvedAt || sub.submittedAt)}
-                </span>
-              </div>
-              <div className="payment-row">
-                <span className="payment-label">User</span>
-                <span className="payment-value">{sub.username || sub.userId || "-"}</span>
-              </div>
-              <div className="payment-row">
-                <span className="payment-label">Plan</span>
-                <span className="payment-value">{sub.planName || "-"}</span>
-              </div>
-              <div className="payment-row">
-                <span className="payment-label">Amount</span>
-                <span className="payment-value">
-                  {editingAmountId === sub.id && onUpdatePaymentAmount ? (
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="table-input"
-                      value={currentAmount}
-                      onChange={(event) => handleAmountChange(sub.id, event.target.value)}
-                      onBlur={() => commitAmount(sub)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          commitAmount(sub);
+      <div className="table-wrap payments-received-table">
+        <table className="table">
+          <colgroup>
+            <col className="col-received-date" />
+            <col className="col-received-user" />
+            <col className="col-received-plan" />
+            <col className="col-received-amount" />
+            <col className="col-received-status" />
+            <col className="col-received-slip" />
+            <col className="col-received-actions" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>User</th>
+              <th>Plan</th>
+              <th>Amount Paid</th>
+              <th>Status</th>
+              <th>Slip</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {approved.map((sub) => {
+              const rowId =
+                sub.id || `${sub.submittedAt || "no-date"}-${sub.planId || sub.planName || ""}`;
+              const isExpanded = expandedId === rowId;
+              const slipUrl = sub.slipData || sub.slipUrl || "";
+              const currentAmount =
+                amountDrafts[sub.id] ??
+                (sub.finalAmount !== undefined && sub.finalAmount !== null
+                  ? String(sub.finalAmount)
+                  : String(sub.price || ""));
+              return (
+                <Fragment key={rowId}>
+                  <tr>
+                    <td className="col-received-date" data-label="Date">
+                      {formatDate(sub.reviewedAt || sub.approvedAt || sub.submittedAt)}
+                    </td>
+                    <td className="col-received-user" data-label="User">
+                      {sub.username || sub.userId || "-"}
+                    </td>
+                    <td className="col-received-plan" data-label="Plan">
+                      <button
+                        type="button"
+                        className="payment-expand"
+                        onClick={() =>
+                          setExpandedId((prev) => (prev === rowId ? null : rowId))
                         }
-                        if (event.key === "Escape") {
-                          event.preventDefault();
-                          setEditingAmountId(null);
-                        }
-                      }}
-                    />
-                  ) : (
-                    amountLabel
-                  )}
-                </span>
-              </div>
-              <div className="payment-row">
-                <span className="payment-label">Discount</span>
-                <span className="payment-value">
-                  {formatDiscount({
-                    ...sub,
-                    finalAmount: amountDrafts[sub.id] ?? sub.finalAmount ?? sub.price ?? 0,
-                  })}
-                </span>
-              </div>
-              <div className="payment-row">
-                <span className="payment-label">Status</span>
-                <span className="payment-value">{String(sub.status || "-").toUpperCase()}</span>
-              </div>
-              <div className="payment-row">
-                <span className="payment-label">Slip</span>
-                <span className="payment-value">
-                  {slipUrl ? (
-                    <div className="row">
+                        aria-expanded={isExpanded}
+                        title="Toggle payment details"
+                      >
+                        <span className="payment-title">{sub.planName || "Plan"}</span>
+                        <span className="payment-caret" aria-hidden="true">
+                          {isExpanded ? "v" : ">"}
+                        </span>
+                      </button>
+                    </td>
+                    <td className="col-received-amount" data-label="Amount">
+                      {formatAmount(sub)}
+                    </td>
+                    <td className="col-received-status" data-label="Status">
+                      {String(sub.status || "-").toUpperCase()}
+                    </td>
+                    <td className="col-received-slip" data-label="Slip">
+                      {slipUrl ? (
+                        <button
+                          type="button"
+                          className="btn ghost tiny"
+                          onClick={() => setOpenSlip({ url: slipUrl, name: sub.slipName })}
+                        >
+                          View
+                        </button>
+                      ) : (
+                        <span className="muted">-</span>
+                      )}
+                    </td>
+                    <td className="col-received-actions" data-label="Actions">
                       <button
                         type="button"
                         className="btn ghost tiny"
-                        onClick={() => setOpenSlip({ url: slipUrl, name: sub.slipName })}
+                        onClick={() => setDeleteTarget(sub)}
                       >
-                        View
+                        Delete
                       </button>
-                      {onUploadSlip && (
-                        <label className="btn ghost tiny">
-                          Replace
-                          <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            className="file-input"
-                            onChange={(event) => handleSlipUpload(sub, event)}
-                            hidden
-                          />
-                        </label>
-                      )}
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr className="payment-detail-row">
+                      <td colSpan={7}>
+                        <div className="payment-detail-grid">
+                          <div className="detail-item">
+                            <span className="detail-label">Plan Price</span>
+                            <span className="detail-value">
+                              {formatAmount({ ...sub, finalAmount: sub.price })}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Amount Paid</span>
+                            <span className="detail-value">
+                              {editingAmountId === sub.id && onUpdatePaymentAmount ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  className="table-input"
+                                  value={currentAmount}
+                                  onChange={(event) =>
+                                    handleAmountChange(sub.id, event.target.value)
+                                  }
+                                  onBlur={() => commitAmount(sub)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter") {
+                                      event.preventDefault();
+                                      commitAmount(sub);
+                                    }
+                                    if (event.key === "Escape") {
+                                      event.preventDefault();
+                                      setEditingAmountId(null);
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                formatAmount(sub)
+                              )}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Discount</span>
+                            <span className="detail-value">
+                              {formatDiscount({
+                                ...sub,
+                                finalAmount:
+                                  amountDrafts[sub.id] ?? sub.finalAmount ?? sub.price ?? 0,
+                              })}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Start</span>
+                            <span className="detail-value">{formatDate(sub.startDate)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">End</span>
+                            <span className="detail-value">{formatDate(sub.endDate)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Slip</span>
+                            <span className="detail-value">{sub.slipName || "-"}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Actions</span>
+                            <span className="detail-value">
+                              {onUploadSlip && (
+                                <label className="btn ghost tiny">
+                                  {slipUrl ? "Replace Slip" : "Upload Slip"}
+                                  <input
+                                    type="file"
+                                    accept="image/*,application/pdf"
+                                    className="file-input"
+                                    onChange={(event) => handleSlipUpload(sub, event)}
+                                    hidden
+                                  />
+                                </label>
+                              )}
+                              {onUpdatePaymentAmount && (
+                                <button
+                                  type="button"
+                                  className="btn ghost tiny"
+                                  onClick={() => {
+                                    setEditingAmountId(sub.id);
+                                    setAmountDrafts((prev) => ({
+                                      ...prev,
+                                      [sub.id]: currentAmount,
+                                    }));
+                                  }}
+                                >
+                                  Edit Amount
+                                </button>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+            {approved.length === 0 && (
+              <tr>
+                <td colSpan={7}>
+                  <div className="empty-state">
+                    <div className="empty-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 12h18" />
+                        <path d="M12 3v18" />
+                      </svg>
                     </div>
-                  ) : onUploadSlip ? (
-                    <label className="btn ghost tiny">
-                      Upload
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        className="file-input"
-                        onChange={(event) => handleSlipUpload(sub, event)}
-                        hidden
-                      />
-                    </label>
-                  ) : (
-                    <span className="muted">-</span>
-                  )}
-                </span>
-              </div>
-              <div className="payment-row">
-                <span className="payment-label">Actions</span>
-                <span className="payment-value">
-                  <button
-                    type="button"
-                    className="btn ghost tiny"
-                    onClick={() => setDeleteTarget(sub)}
-                  >
-                    Delete
-                  </button>
-                  {onUpdatePaymentAmount && (
-                    <button
-                      type="button"
-                      className="btn ghost tiny"
-                      onClick={() => {
-                        setEditingAmountId(sub.id);
-                        setAmountDrafts((prev) => ({
-                          ...prev,
-                          [sub.id]: currentAmount,
-                        }));
-                      }}
-                    >
-                      Edit Amount
-                    </button>
-                  )}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-        {approved.length === 0 && (
-          <div className="empty-state">
-            <div className="empty-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 12h18" />
-                <path d="M12 3v18" />
-              </svg>
-            </div>
-            <div className="empty-title">No payments received yet</div>
-            <div className="empty-subtitle">Approved payments will appear here.</div>
-          </div>
-        )}
+                    <div className="empty-title">No payments received yet</div>
+                    <div className="empty-subtitle">Approved payments will appear here.</div>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {deleteTarget && (

@@ -1405,6 +1405,20 @@ input:focus {
   padding: 8px 6px;
 }
 
+.payments-received-page .payment-detail-row td {
+  white-space: normal;
+  overflow: visible;
+  background: rgba(15, 22, 39, 0.6);
+  border-bottom: 1px solid var(--border);
+}
+
+.payments-received-page .payment-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px 12px;
+  padding: 8px 6px;
+}
+
 .payments-page .col-payment-date {
   width: 18%;
 }
@@ -1426,7 +1440,7 @@ input:focus {
 }
 
 .payments-received-page .col-received-date {
-  width: 14%;
+  width: 16%;
 }
 
 .payments-received-page .col-received-user {
@@ -1434,15 +1448,11 @@ input:focus {
 }
 
 .payments-received-page .col-received-plan {
-  width: 18%;
+  width: 20%;
 }
 
 .payments-received-page .col-received-amount {
-  width: 12%;
-}
-
-.payments-received-page .col-received-discount {
-  width: 12%;
+  width: 14%;
 }
 
 .payments-received-page .col-received-status {
@@ -1464,42 +1474,6 @@ input:focus {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.payments-received-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.payment-card {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: rgba(15, 22, 39, 0.55);
-  padding: 10px 12px;
-  display: grid;
-  gap: 6px;
-}
-
-.payment-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.payment-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
-.payment-value {
-  font-size: 12px;
-  font-weight: 600;
-  text-align: right;
 }
 
 .payments-received-page .table thead th {
@@ -3483,23 +3457,19 @@ input:focus {
   }
 
   .payments-received-page .col-received-date {
-    width: 16%;
+    width: 18%;
   }
 
   .payments-received-page .col-received-user {
-    width: 18%;
+    width: 20%;
   }
 
   .payments-received-page .col-received-plan {
-    width: 18%;
+    width: 22%;
   }
 
   .payments-received-page .col-received-amount {
-    width: 12%;
-  }
-
-  .payments-received-page .col-received-discount {
-    width: 12%;
+    width: 14%;
   }
 
   .payments-received-page .col-received-status {
@@ -3507,11 +3477,11 @@ input:focus {
   }
 
   .payments-received-page .col-received-slip {
-    width: 12%;
+    width: 10%;
   }
 
   .payments-received-page .col-received-actions {
-    width: 10%;
+    width: 6%;
   }
 
   .payments-received-page .table th,
@@ -3519,82 +3489,6 @@ input:focus {
     white-space: nowrap;
   }
 
-  .payments-received-page .table thead {
-    display: none;
-  }
-
-  .payments-received-page colgroup,
-  .payments-received-page col {
-    display: none;
-  }
-
-  .payments-received-page .table,
-  .payments-received-page .table tbody,
-  .payments-received-page .table tr,
-  .payments-received-page .table td {
-    display: block;
-    width: 100%;
-  }
-
-  .payments-received-page .table {
-    min-width: 0;
-  }
-
-  .payments-received-page .table-wrap {
-    overflow-x: hidden;
-  }
-
-  .payments-received-page .table-wrap,
-  .payments-received-page .table,
-  .payments-received-page .table tbody,
-  .payments-received-page .table tr,
-  .payments-received-page .table td {
-    overflow-x: hidden;
-    max-width: 100%;
-  }
-
-  .payments-received-page .table tr {
-    margin-bottom: 10px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 8px 10px;
-    background: rgba(15, 22, 39, 0.55);
-  }
-
-  .payments-received-page .table td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 4px 0;
-    white-space: normal;
-  }
-
-  .payments-received-page .table td::before {
-    content: attr(data-label);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-  }
-
-  .payments-received-page .col-received-user,
-  .payments-received-page .col-received-plan {
-    max-width: 160px;
-  }
-
-  .payments-received-table {
-    max-width: 100%;
-    overflow-x: visible;
-  }
-
-  .payments-received-table .table {
-    min-width: 720px;
-  }
-
-  .payments-received-page {
-    overflow-x: hidden;
-  }
 
   .payments-received-page .table-wrap {
     overflow-x: visible;
