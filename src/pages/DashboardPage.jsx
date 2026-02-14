@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const TIME_ZONE = "Asia/Karachi";
@@ -49,15 +49,11 @@ const sumByCurrency = (subs) => {
   return totals;
 };
 
-export default function DashboardPage({ users = [], subscriptions = [], movieRequests = [] }) {
+export default function DashboardPage({ users = [], subscriptions = [] }) {
   const navigate = useNavigate();
   const pendingApprovals = useMemo(
     () => (subscriptions || []).filter((sub) => sub.status === "pending"),
     [subscriptions]
-  );
-  const openRequests = useMemo(
-    () => (movieRequests || []).filter((req) => req.status !== "done"),
-    [movieRequests]
   );
   const expiredUsers = useMemo(() => {
     const latest = getLatestSubsByUser(subscriptions);
@@ -101,6 +97,27 @@ export default function DashboardPage({ users = [], subscriptions = [], movieReq
     });
     return sumByCurrency(recent);
   }, [paymentsReceived]);
+  const monthOptions = useMemo(() => {
+    const set = new Set();
+    paymentsReceived.forEach((sub) => {
+      const ts = new Date(sub.approvedAt || sub.reviewedAt || sub.submittedAt || 0);
+      if (Number.isNaN(ts.getTime())) return;
+      const key = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, "0")}`;
+      set.add(key);
+    });
+    return Array.from(set).sort().reverse();
+  }, [paymentsReceived]);
+  const [selectedMonth, setSelectedMonth] = useState(() => monthOptions[0] || "");
+  const monthPayments = useMemo(() => {
+    if (!selectedMonth) return [];
+    return paymentsReceived.filter((sub) => {
+      const ts = new Date(sub.approvedAt || sub.reviewedAt || sub.submittedAt || 0);
+      if (Number.isNaN(ts.getTime())) return false;
+      const key = `${ts.getUTCFullYear()}-${String(ts.getUTCMonth() + 1).padStart(2, "0")}`;
+      return key === selectedMonth;
+    });
+  }, [paymentsReceived, selectedMonth]);
+  const monthTotals = useMemo(() => sumByCurrency(monthPayments), [monthPayments]);
 
   const userCount = users.length;
 
@@ -122,17 +139,6 @@ export default function DashboardPage({ users = [], subscriptions = [], movieReq
             <div className="mini-pill">{pendingApprovals.length}</div>
           </div>
           <div className="mini-body">Payments waiting for approval.</div>
-        </button>
-        <button
-          type="button"
-          className="mini-card"
-          onClick={() => navigate("/media-requests")}
-        >
-          <div className="mini-header">
-            <div className="mini-title">Open Requests</div>
-            <div className="mini-pill">{openRequests.length}</div>
-          </div>
-          <div className="mini-body">Movie/TV requests not completed yet.</div>
         </button>
         <button
           type="button"
@@ -176,102 +182,83 @@ export default function DashboardPage({ users = [], subscriptions = [], movieReq
         </div>
       </div>
 
-      <div className="dashboard-grid">
-        <div className="card">
-          <div className="card-header">
-            <h3>Pending Payments</h3>
-            <div className="count">{pendingApprovals.length}</div>
-          </div>
-          <div className="table-wrap">
-            <table className="table">
-              <colgroup>
-                <col className="col-dash-user" />
-                <col className="col-dash-plan" />
-                <col className="col-dash-date" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Plan</th>
-                  <th>Submitted</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingApprovals.map((sub) => (
-                  <tr key={sub.id || sub.submittedAt}>
-                    <td>{sub.username || "Unknown"}</td>
-                    <td>{sub.planName || "-"}</td>
-                    <td>{formatDate(sub.submittedAt)}</td>
-                  </tr>
-                ))}
-                {pendingApprovals.length === 0 && (
-                  <tr>
-                    <td colSpan={3}>
-                      <div className="empty-state">
-                        <div className="empty-icon" aria-hidden="true">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M9 12l2 2 4-4" />
-                            <circle cx="12" cy="12" r="9" />
-                          </svg>
-                        </div>
-                        <div className="empty-title">No pending approvals</div>
-                        <div className="empty-subtitle">You're all caught up.</div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      <div className="card">
+        <div className="card-header">
+          <h3>Monthly Payments</h3>
+          <div className="row">
+            <select
+              className="select"
+              value={selectedMonth}
+              onChange={(event) => setSelectedMonth(event.target.value)}
+            >
+              <option value="">Select month</option>
+              {monthOptions.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-
-        <div className="card">
-          <div className="card-header">
-            <h3>Open Requests</h3>
-            <div className="count">{openRequests.length}</div>
+        <div className="status-grid">
+          <div className="status-item">
+            <div className="status-label">Monthly Total</div>
+            <div className="status-value">
+              {Object.keys(monthTotals).length === 0
+                ? "-"
+                : Object.entries(monthTotals)
+                    .map(([currency, total]) => formatMoney(total, currency))
+                    .join(" • ")}
+            </div>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <colgroup>
-                <col className="col-dash-user" />
-                <col className="col-dash-plan" />
-                <col className="col-dash-date" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>User</th>
-                  <th>Requested</th>
-                </tr>
-              </thead>
-              <tbody>
-                {openRequests.map((req) => (
-                  <tr key={req.id || req.requestedAt}>
-                    <td>{req.title || "Untitled"}</td>
-                    <td>{req.requestedBy || "-"}</td>
-                    <td>{formatDate(req.requestedAt)}</td>
-                  </tr>
-                ))}
-                {openRequests.length === 0 && (
-                  <tr>
-                    <td colSpan={3}>
-                      <div className="empty-state">
-                        <div className="empty-icon" aria-hidden="true">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
-                          </svg>
-                        </div>
-                        <div className="empty-title">No open requests</div>
-                        <div className="empty-subtitle">New requests will show here.</div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="status-item">
+            <div className="status-label">Payments Count</div>
+            <div className="status-value">{monthPayments.length}</div>
           </div>
         </div>
-
+        <div className="table-wrap">
+          <table className="table">
+            <colgroup>
+              <col className="col-dash-user" />
+              <col className="col-dash-plan" />
+              <col className="col-dash-date" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Plan</th>
+                <th>Amount</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthPayments.map((sub) => (
+                <tr key={sub.id || sub.submittedAt}>
+                  <td>{sub.username || "Unknown"}</td>
+                  <td>{sub.planName || "-"}</td>
+                  <td>{formatMoney(sub.finalAmount ?? sub.price, sub.currency)}</td>
+                  <td>{formatDate(sub.approvedAt || sub.reviewedAt || sub.submittedAt)}</td>
+                </tr>
+              ))}
+              {monthPayments.length === 0 && (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="empty-state">
+                      <div className="empty-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 12h18" />
+                          <path d="M12 3v18" />
+                        </svg>
+                      </div>
+                      <div className="empty-title">No payments for this month</div>
+                      <div className="empty-subtitle">Select another month to view data.</div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   );
