@@ -3489,6 +3489,22 @@ input:focus {
     white-space: nowrap;
   }
 
+  .payments-received-page .table {
+    table-layout: auto;
+    width: 100%;
+  }
+
+  .payments-received-page .table-wrap {
+    overflow-x: hidden;
+  }
+
+  .payments-received-page .col-received-plan,
+  .payments-received-page .col-received-user {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
 
   .payments-received-page .table-wrap {
     overflow-x: visible;
