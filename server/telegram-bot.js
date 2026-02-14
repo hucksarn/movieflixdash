@@ -13,6 +13,7 @@ const MEDIA_REQUESTS_PATH = path.resolve(process.cwd(), "media-requests.json");
 const STATE_PATH = path.resolve(process.cwd(), "telegram-state.json");
 const LOCK_PATH = path.resolve(process.cwd(), "telegram-bot.lock");
 const WATCH_DEBOUNCE_MS = 300;
+const DASHBOARD_BASE_URL = process.env.DASHBOARD_URL || "http://127.0.0.1:5002";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let pendingPaymentPing = false;
@@ -173,6 +174,46 @@ const sendPhotoDataUri = async (token, chatId, dataUri, caption, replyMarkup) =>
     headers: form.getHeaders(),
   });
   return response.json();
+};
+
+const sendDocumentBuffer = async (token, chatId, buffer, filename, mime, caption, replyMarkup) => {
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  form.append("document", buffer, { filename, contentType: mime || "application/octet-stream" });
+  if (caption) form.append("caption", caption);
+  form.append("parse_mode", "HTML");
+  if (replyMarkup) form.append("reply_markup", JSON.stringify(replyMarkup));
+  const response = await fetch(buildTelegramUrl(token, "sendDocument"), {
+    method: "POST",
+    body: form,
+    headers: form.getHeaders(),
+  });
+  return response.json();
+};
+
+const sendSlipFromUrl = async (token, chatId, slipUrl, caption, replyMarkup) => {
+  const absoluteUrl = slipUrl.startsWith("http")
+    ? slipUrl
+    : `${DASHBOARD_BASE_URL.replace(/\/+$/, "")}${slipUrl}`;
+  const response = await fetch(absoluteUrl);
+  if (!response.ok) throw new Error(`Slip fetch failed (${response.status})`);
+  const mime = response.headers.get("content-type") || "";
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (mime.startsWith("image/")) {
+    const form = new FormData();
+    form.append("chat_id", String(chatId));
+    form.append("photo", buffer, { filename: "slip.jpg", contentType: mime });
+    if (caption) form.append("caption", caption);
+    form.append("parse_mode", "HTML");
+    if (replyMarkup) form.append("reply_markup", JSON.stringify(replyMarkup));
+    const result = await fetch(buildTelegramUrl(token, "sendPhoto"), {
+      method: "POST",
+      body: form,
+      headers: form.getHeaders(),
+    });
+    return result.json();
+  }
+  return sendDocumentBuffer(token, chatId, buffer, "slip.pdf", mime, caption, replyMarkup);
 };
 
 const answerCallback = (token, callbackId, text) =>
@@ -599,6 +640,12 @@ const notifyPendingPayments = async (settings, token, state) => {
           result = await sendPhotoDataUri(token, adminId, slip, text, keyboard);
           if (!result?.ok) {
             console.error("Telegram photo send failed:", result);
+            result = await sendMessage(token, adminId, text, keyboard);
+          }
+        } else if (slip) {
+          result = await sendSlipFromUrl(token, adminId, slip, text, keyboard);
+          if (!result?.ok) {
+            console.error("Telegram slip send failed:", result);
             result = await sendMessage(token, adminId, text, keyboard);
           }
         } else {
