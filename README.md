@@ -1,5 +1,20 @@
 # MovieFlix Dashboard
 
+## After Server Reboot (Auto-Run)
+
+Run these to bring the dashboard + tunnel back up:
+
+```bash
+cd ~/movieflixdash
+git pull
+pkill -f "/home/alee20300/movieflixdash/server/app.js"
+nohup env PORT=5002 node /home/alee20300/movieflixdash/server/app.js > /tmp/movieflix-app.log 2>&1 </dev/null &
+disown
+
+pkill -f "cloudflared tunnel run"
+nohup ~/bin/cloudflared tunnel run movieflix > /tmp/cloudflared.log 2>&1 &
+```
+
 ## Quick Start (Single Command)
 
 Run everything (dashboard + Telegram bot) from the project folder:
