@@ -3,7 +3,7 @@ import http from "http";
 import path from "path";
 import os from "os";
 import { fileURLToPath } from "url";
-import { spawn } from "child_process";
+import { execFileSync, spawn } from "child_process";
 import fetch from "node-fetch";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -147,6 +147,14 @@ const isTelegramBotRunning = () => {
     } catch {
       // ignore stat errors
     }
+  }
+  try {
+    const output = execFileSync("ps", ["-ef"], { encoding: "utf-8" });
+    return output
+      .split("\n")
+      .some((line) => line.includes("telegram-bot.js") && line.includes("node"));
+  } catch {
+    // ignore ps errors
   }
   return false;
 };
