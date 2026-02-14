@@ -14,6 +14,8 @@ const DIST = path.resolve(ROOT, "dist");
 
 const settingsFile = path.resolve(ROOT, "settings.json");
 const subscriptionsFile = path.resolve(ROOT, "subscriptions.json");
+const slipsDir = path.resolve(ROOT, "slips");
+const slipsIndexFile = path.resolve(ROOT, "slips.json");
 const plansFile = path.resolve(ROOT, "plans.json");
 const movieRequestsFile = path.resolve(ROOT, "movie-requests.json");
 const mediaRequestsFile = path.resolve(ROOT, "media-requests.json");
@@ -131,6 +133,71 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (err) => {
   logServerError("unhandledRejection", err);
 });
+
+const ensureSlipDir = () => {
+  if (!fs.existsSync(slipsDir)) fs.mkdirSync(slipsDir, { recursive: true });
+};
+
+const loadSlipIndex = () => readJson(slipsIndexFile, {});
+const saveSlipIndex = (index) => writeJson(slipsIndexFile, index);
+
+const parseDataUrl = (value) => {
+  if (!value || typeof value !== "string") return null;
+  const match = value.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  return { mime: match[1], data: match[2] };
+};
+
+const getSlipExt = (mime) => {
+  if (!mime) return "bin";
+  if (mime.includes("pdf")) return "pdf";
+  if (mime.includes("png")) return "png";
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
+  if (mime.includes("gif")) return "gif";
+  return "bin";
+};
+
+const storeSlipForSub = (sub, index) => {
+  const parsed = parseDataUrl(sub?.slipData);
+  if (!parsed) return sub;
+  ensureSlipDir();
+  const slipId = sub.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const ext = getSlipExt(parsed.mime);
+  const filePath = path.resolve(slipsDir, `${slipId}.${ext}`);
+  try {
+    fs.writeFileSync(filePath, Buffer.from(parsed.data, "base64"));
+    index[slipId] = {
+      id: slipId,
+      path: filePath,
+      mime: parsed.mime,
+      name: sub.slipName || `slip-${slipId}.${ext}`,
+    };
+  } catch (err) {
+    logServerError("storeSlip", err);
+  }
+  const { slipData, ...rest } = sub || {};
+  return {
+    ...rest,
+    id: slipId,
+    slipUrl: `/api/slips/${slipId}`,
+  };
+};
+
+const migrateSlips = (subs) => {
+  const index = loadSlipIndex();
+  let changed = false;
+  const next = (subs || []).map((sub) => {
+    if (sub?.slipData) {
+      changed = true;
+      return storeSlipForSub(sub, index);
+    }
+    return sub;
+  });
+  if (changed) {
+    saveSlipIndex(index);
+  }
+  return { next, changed };
+};
 
 const isProcessRunning = (pid) => {
   if (!pid || Number.isNaN(Number(pid))) return false;
@@ -519,7 +586,12 @@ const handleSettings = async (req, res) => {
 
 const handleSubscriptions = async (req, res) => {
   if (req.method === "GET") {
-    sendJson(res, readJson(subscriptionsFile, []));
+    const data = readJson(subscriptionsFile, []);
+    const migrated = migrateSlips(data);
+    if (migrated.changed) {
+      writeJson(subscriptionsFile, migrated.next);
+    }
+    sendJson(res, migrated.next);
     return true;
   }
   if (req.method === "POST") {
@@ -530,7 +602,12 @@ const handleSubscriptions = async (req, res) => {
     } catch {
       data = [];
     }
-    writeJson(subscriptionsFile, data);
+    const migrated = migrateSlips(data);
+    if (migrated.changed) {
+      writeJson(subscriptionsFile, migrated.next);
+    } else {
+      writeJson(subscriptionsFile, data);
+    }
     sendJson(res, { ok: true });
     return true;
   }
@@ -555,6 +632,24 @@ const handlePlans = async (req, res) => {
     return true;
   }
   return false;
+};
+
+const handleSlip = async (req, res, url) => {
+  if (req.method !== "GET") return false;
+  const parts = (url?.pathname || "").split("/").filter(Boolean);
+  const slipId = parts[2] || "";
+  if (!slipId) return false;
+  const index = loadSlipIndex();
+  const entry = index[slipId];
+  if (!entry || !entry.path || !fs.existsSync(entry.path)) {
+    res.statusCode = 404;
+    res.end("Not found");
+    return true;
+  }
+  res.statusCode = 200;
+  res.setHeader("Content-Type", entry.mime || "application/octet-stream");
+  fs.createReadStream(entry.path).pipe(res);
+  return true;
 };
 
 const handleMovieRequests = async (req, res) => {
@@ -1480,6 +1575,7 @@ const router = async (req, res) => {
   if (pathname.startsWith("/api/unlimited-users")) return await handleUnlimitedUsers(req, res);
   if (pathname.startsWith("/api/user-tags")) return await handleUserTags(req, res);
   if (pathname.startsWith("/api/client-errors")) return await handleClientErrors(req, res);
+  if (pathname.startsWith("/api/slips")) return await handleSlip(req, res, url);
   if (pathname.startsWith("/api/tunnel")) return await handleTunnel(req, res);
   if (pathname.startsWith("/api/status")) return await handleStatus(req, res);
   if (pathname.startsWith("/api/emby")) return await handleEmbyProxy(req, res);
