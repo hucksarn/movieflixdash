@@ -2534,19 +2534,23 @@ input:focus {
 }
 
 .users-page .col-user {
-  width: 38%;
+  width: 30%;
 }
 
 .users-page .col-status {
-  width: 14%;
+  width: 10%;
 }
 
 .users-page .col-days {
-  width: 12%;
+  width: 10%;
 }
 
 .users-page .col-play {
-  width: 14%;
+  width: 10%;
+}
+
+.users-page .col-last-active {
+  width: 18%;
 }
 
 .users-page .col-action {
@@ -3435,19 +3439,23 @@ input:focus {
   }
 
   .users-page .col-user {
-    width: 38%;
+    width: 30%;
   }
 
   .users-page .col-status {
-    width: 16%;
+    width: 12%;
   }
 
   .users-page .col-days {
-    width: 14%;
+    width: 12%;
   }
 
   .users-page .col-play {
-    width: 14%;
+    width: 10%;
+  }
+
+  .users-page .col-last-active {
+    width: 18%;
   }
 
   .users-page .col-action {

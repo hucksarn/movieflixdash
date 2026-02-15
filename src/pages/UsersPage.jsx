@@ -26,6 +26,20 @@ const formatDate = (value) => {
   return new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE }).format(date);
 };
 
+const formatDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
 const getDateParts = (value) => {
   if (!value) return null;
   const date = new Date(value);
@@ -632,6 +646,7 @@ export default function UsersPage({
             <col className="col-status" />
             <col className="col-days" />
             <col className="col-play" />
+            {isAdmin && <col className="col-last-active" />}
             <col className="col-action" />
           </colgroup>
           <thead>
@@ -657,6 +672,7 @@ export default function UsersPage({
                     Play <span className="sort-indicator">{sortIndicator("play")}</span>
                   </button>
                 </th>
+                {isAdmin && <th className="col-last-active">Last Active</th>}
                 <th className="col-action">Action</th>
               </tr>
             ) : (
@@ -681,6 +697,7 @@ export default function UsersPage({
                     Play <span className="sort-indicator">{sortIndicator("play")}</span>
                   </button>
                 </th>
+                {isAdmin && <th className="col-last-active">Last Active</th>}
                 <th className="col-action">Action</th>
               </tr>
             )}
@@ -700,6 +717,9 @@ export default function UsersPage({
               const draft = dateDrafts[userId] || {};
               const draftStart = draft.startDate ?? startValue;
               const draftEnd = draft.endDate ?? endValue;
+              const lastActiveRaw =
+                user?.LastActivityDate || user?.LastLoginDate || user?.lastActivityDate || "";
+              const lastActive = formatDateTime(lastActiveRaw);
               const markedUnlimited = isMarkedUnlimited(user);
               const defaultUnlimited = isDefaultUnlimited(user);
               const canMakeUnlimited =
@@ -763,6 +783,7 @@ export default function UsersPage({
                     {playStatus}
                   </button>
                 </td>
+                {isAdmin && <td className="col-last-active">{lastActive}</td>}
                 <td className="col-action">
                   {activeTab !== "unlimited" && canMakeUnlimited ? (
                     <button
@@ -791,7 +812,7 @@ export default function UsersPage({
               </tr>
               {isExpanded && (
                 <tr className="user-detail-row">
-                  <td colSpan={5}>
+                  <td colSpan={isAdmin ? 6 : 5}>
                     <div className="user-detail-grid">
                       <div className="detail-item">
                         <span className="detail-label">Username</span>
