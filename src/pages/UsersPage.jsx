@@ -493,7 +493,8 @@ export default function UsersPage({
           subRow.status === "Expired" &&
           typeof subRow.daysLeft === "number" &&
           subRow.daysLeft < 0;
-        const playStatus = shouldForceOff ? "OFF" : getPlayStatus(user);
+        const isUnlimited = isDefaultUnlimited(user) || isMarkedUnlimited(user);
+        const playStatus = isUnlimited ? "ON" : shouldForceOff ? "OFF" : getPlayStatus(user);
         const startMs = toMs(subRow.startDate);
         const endMs = toMs(subRow.endDate);
         const name = (user.Name || user.name || "Unknown").toLowerCase();
