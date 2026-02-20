@@ -395,6 +395,13 @@ const syncPlaybackLibraries = async () => {
   const allGuids = (Array.isArray(libs) ? libs : [])
     .map((item) => item?.Guid || item?.Id || "")
     .filter(Boolean);
+  const kidsGuids = (Array.isArray(libs) ? libs : [])
+    .filter((item) => {
+      const name = String(item?.Name || "").trim().toLowerCase();
+      return name === "anime series" || name === "cartoons";
+    })
+    .map((item) => item?.Guid || item?.Id || "")
+    .filter(Boolean);
   const subscription = (Array.isArray(libs) ? libs : []).find(
     (item) => String(item?.Name || "").trim().toLowerCase() === "subscription"
   );
@@ -490,6 +497,15 @@ const syncPlaybackLibraries = async () => {
 
   const normalizeList = (value) =>
     (Array.isArray(value) ? value : []).map(String).filter(Boolean).sort();
+  const hasParentalRating = (policy) => {
+    if (!policy) return false;
+    const candidates = [
+      policy.MaxParentalRating,
+      policy.MaxAllowedRating,
+      policy.MaxAllowedContentRating,
+    ];
+    return candidates.some((value) => value !== null && value !== undefined);
+  };
 
   let updated = 0;
   const disableAutoTrial = Boolean(settings?.disableAutoTrial);
@@ -561,15 +577,23 @@ const syncPlaybackLibraries = async () => {
     const unlimited = isUnlimitedUser(user, unlimitedUsers);
     const isAdmin =
       user?.Policy?.IsAdministrator === true || user?.Configuration?.IsAdministrator === true;
+    const isKids = hasParentalRating(policy);
     const shouldEnableLibraries = unlimited || isAdmin || status.status === "active";
 
     let target = {};
-    if (shouldEnableLibraries) {
+    if (isKids && kidsGuids.length > 0) {
+      target = {
+        EnableAllFolders: false,
+        EnabledFolders: kidsGuids,
+        EnableAllChannels: false,
+        EnabledChannels: [],
+      };
+    } else if (shouldEnableLibraries) {
       target = {
         EnableAllFolders: false,
         EnabledFolders: subscriptionGuid
           ? allGuids.filter((guid) => guid !== subscriptionGuid)
-          : allGuids,
+        : allGuids,
         EnableAllChannels: true,
         EnabledChannels: [],
       };

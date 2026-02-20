@@ -348,9 +348,10 @@ const fetchJellyseerrJson = async (path, options = {}) => {
 
 let cachedLibraryGuids = null;
 let cachedSubscriptionGuid = null;
+let cachedKidsGuids = null;
 const fetchLibraryGuids = async () => {
   if (cachedLibraryGuids) {
-    return { all: cachedLibraryGuids, subscription: cachedSubscriptionGuid };
+    return { all: cachedLibraryGuids, subscription: cachedSubscriptionGuid, kids: cachedKidsGuids };
   }
   const response = await fetch(`${API_BASE}/api/emby/Library/SelectableMediaFolders`);
   if (!response.ok) {
@@ -361,19 +362,45 @@ const fetchLibraryGuids = async () => {
   const allGuids = (Array.isArray(data) ? data : [])
     .map((item) => item?.Guid || item?.Id || "")
     .filter(Boolean);
+  const kidsGuids = (Array.isArray(data) ? data : [])
+    .filter((item) => {
+      const name = String(item?.Name || "").trim().toLowerCase();
+      return name === "anime series" || name === "cartoons";
+    })
+    .map((item) => item?.Guid || item?.Id || "")
+    .filter(Boolean);
   const subscription = (Array.isArray(data) ? data : []).find(
     (item) => String(item?.Name || "").trim().toLowerCase() === "subscription"
   );
   cachedLibraryGuids = allGuids;
   cachedSubscriptionGuid = subscription?.Guid || subscription?.Id || null;
-  return { all: cachedLibraryGuids, subscription: cachedSubscriptionGuid };
+  cachedKidsGuids = kidsGuids;
+  return { all: cachedLibraryGuids, subscription: cachedSubscriptionGuid, kids: cachedKidsGuids };
 };
 
 const normalizeGuidList = (value) =>
   (Array.isArray(value) ? value : []).map(String).filter(Boolean).sort();
 
-const libraryPolicyForPlayback = async (enablePlayback) => {
-  const { all, subscription } = await fetchLibraryGuids();
+const hasParentalRating = (policy) => {
+  if (!policy) return false;
+  const candidates = [
+    policy.MaxParentalRating,
+    policy.MaxAllowedRating,
+    policy.MaxAllowedContentRating,
+  ];
+  return candidates.some((value) => value !== null && value !== undefined);
+};
+
+const libraryPolicyForPlayback = async (user, enablePlayback) => {
+  const { all, subscription, kids } = await fetchLibraryGuids();
+  if (hasParentalRating(user?.Policy) && kids?.length) {
+    return {
+      EnableAllFolders: false,
+      EnabledFolders: kids,
+      EnableAllChannels: false,
+      EnabledChannels: [],
+    };
+  }
   if (enablePlayback) {
     return {
       EnableAllFolders: false,
@@ -1639,7 +1666,7 @@ export default function App() {
             continue;
           }
           try {
-            const target = await libraryPolicyForPlayback(playback);
+            const target = await libraryPolicyForPlayback(user, playback);
             if (shouldUpdateLibraryPolicy(user.Policy, target)) {
               await updateEmbyPolicy(userId, { ...user.Policy, ...target });
               adjustedUsers.push({
